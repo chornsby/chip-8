@@ -202,4 +202,9 @@ mod tests {
         ld_i_v: (0xF955, Command::LdIV(0x9)),
         ld_v_i: (0xFA65, Command::LdVI(0xA)),
     }
+
+    #[test]
+    fn unknown_command() {
+        assert_eq!(Command::try_from(0x89A8), Err("Unknown command"))
+    }
 }

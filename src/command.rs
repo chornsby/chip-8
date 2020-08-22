@@ -154,63 +154,52 @@ impl TryFrom<u16> for Command {
 mod tests {
     use super::*;
 
-    #[test]
-    fn parse_command_cls() {
-        assert_eq!(Command::try_from(0x00E0), Ok(Command::Cls))
+    macro_rules! parse_command_tests {
+        ($($name:ident: $value:expr,)*) => {
+            $(
+                #[test]
+                fn $name() {
+                    let (input, expected) = $value;
+                    assert_eq!(Command::try_from(input), Ok(expected));
+                }
+            )*
+        };
     }
 
-    #[test]
-    fn parse_command_ret() {
-        assert_eq!(Command::try_from(0x00EE), Ok(Command::Ret))
-    }
-
-    #[test]
-    fn parse_command_jp() {
-        assert_eq!(Command::try_from(0x1234), Ok(Command::Jp(0x0234)))
-    }
-
-    #[test]
-    fn parse_command_call() {
-        assert_eq!(Command::try_from(0x2345), Ok(Command::Call(0x0345)))
-    }
-
-    #[test]
-    fn parse_command_se_v() {
-        assert_eq!(Command::try_from(0x3456), Ok(Command::SeV(4, 0x56)))
-    }
-
-    #[test]
-    fn parse_command_sne_v() {
-        assert_eq!(Command::try_from(0x4567), Ok(Command::SneV(5, 0x67)))
-    }
-
-    #[test]
-    fn parse_command_se_vv() {
-        assert_eq!(Command::try_from(0x5670), Ok(Command::SeVV(6, 7)))
-    }
-
-    #[test]
-    fn parse_command_ld_v() {
-        assert_eq!(Command::try_from(0x6789), Ok(Command::LdV(7, 0x89)))
-    }
-
-    #[test]
-    fn parse_command_add_v() {
-        assert_eq!(Command::try_from(0x7890), Ok(Command::AddV(8, 0x90)))
-    }
-
-    #[test]
-    fn parse_command_ld_vv() {
-        assert_eq!(Command::try_from(0x8900), Ok(Command::LdVV(9, 0)))
-    }
-
-    #[test]
-    fn parse_command_or_vv() {
-        assert_eq!(Command::try_from(0x8901), Ok(Command::OrVV(9, 0)))
-    }
-
-    #[test]
-    fn parse_command_and_vv() {
-        assert_eq!(Command::try_from(0x8902), Ok(Command::AndVV(9, 0)))
+    parse_command_tests! {
+        cls: (0x00E0, Command::Cls),
+        ret: (0x00EE, Command::Ret),
+        jp: (0x1234, Command::Jp(0x0234)),
+        call: (0x2345, Command::Call(0x0345)),
+        se_v: (0x3456, Command::SeV(0x4, 0x56)),
+        sne_v: (0x4567, Command::SneV(0x5, 0x67)),
+        se_vv: (0x5670, Command::SeVV(0x6, 0x7)),
+        ld_v: (0x6789, Command::LdV(0x7, 0x89)),
+        add_v: (0x789A, Command::AddV(0x8, 0x9A)),
+        ld_vv: (0x89A0, Command::LdVV(0x9, 0xA)),
+        or_vv: (0x89A1, Command::OrVV(0x9, 0xA)),
+        and_vv: (0x89A2, Command::AndVV(0x9, 0xA)),
+        xor_vv: (0x89A3, Command::XorVV(0x9, 0xA)),
+        add_vv: (0x89A4, Command::AddVV(0x9, 0xA)),
+        sub_vv: (0x89A5, Command::SubVV(0x9, 0xA)),
+        shr_vv: (0x89A6, Command::ShrVV(0x9, 0xA)),
+        subn_vv: (0x89A7, Command::SubnVV(0x9, 0xA)),
+        shl_vv: (0x89AE, Command::ShlVV(0x9, 0xA)),
+        sne_vv: (0x9AB0, Command::SneVV(0xA, 0xB)),
+        ld_i: (0xABCD, Command::LdI(0x0BCD)),
+        jp_v0: (0xBCDE, Command::JpV0(0xCDE)),
+        rnd_v: (0xCDEF, Command::RndV(0xD, 0xEF)),
+        drw_vv: (0xDEF0, Command::DrwVV(0xE, 0xF, 0x0)),
+        skp_v: (0xE09E, Command::SkpV(0x0)),
+        sknp_v: (0xE1A1, Command::SknpV(0x1)),
+        ld_v_dt: (0xF207, Command::LdVDt(0x2)),
+        ld_v_k: (0xF30A, Command::LdVK(0x3)),
+        ld_dt_v: (0xF415, Command::LdDtV(0x4)),
+        ld_st_v: (0xF518, Command::LdStV(0x5)),
+        add_i_v: (0xF61E, Command::AddIV(0x6)),
+        ld_f_v: (0xF729, Command::LdFV(0x7)),
+        ld_b_v: (0xF833, Command::LdBV(0x8)),
+        ld_i_v: (0xF955, Command::LdIV(0x9)),
+        ld_v_i: (0xFA65, Command::LdVI(0xA)),
     }
 }

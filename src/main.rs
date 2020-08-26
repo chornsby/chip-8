@@ -1,32 +1,18 @@
-mod command;
-
-use command::Command;
-
-struct Emulator {
-    memory: [u8; 4096],
-    registers: [u8; 16],
-    stack: [usize; 16],
-    delay: u8,
-    sound: u8,
-    stack_pointer: usize,
-}
-
-impl Emulator {
-    fn new() -> Self {
-        Self {
-            memory: [0; 4096],
-            registers: [0; 16],
-            stack: [0; 16],
-            delay: 0,
-            sound: 0,
-            stack_pointer: 0,
-        }
-    }
-}
-
-struct Program(Vec<Command>);
+use bevy::prelude::*;
+use bevy::render::pass::ClearColor;
+use bevy::window::WindowMode;
 
 fn main() {
-    let program = Program(vec![]);
-    let mut emulator = Emulator::new();
+    App::build()
+        .add_resource(ClearColor(Color::rgb(0.7, 0.7, 0.7)))
+        .add_resource(WindowDescriptor {
+            width: 640,
+            height: 320,
+            title: "Chip-8 Emulator".to_string(),
+            vsync: false,
+            mode: WindowMode::Windowed,
+            ..Default::default()
+        })
+        .add_default_plugins()
+        .run();
 }

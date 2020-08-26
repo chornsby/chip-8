@@ -4,4 +4,7 @@ version = "0.1.0"
 authors = ["chornsby"]
 edition = "2018"
 
-[dependencies]
+[dependencies.bevy]
+default-features = false
+features = ["bevy_wgpu", "bevy_winit"]
+version = "0.1.3"

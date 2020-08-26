@@ -2,7 +2,10 @@ use bevy::prelude::*;
 use bevy::render::pass::ClearColor;
 use bevy::window::WindowMode;
 
+mod emulator;
 mod keyboard;
+mod memory;
+mod rom;
 
 fn main() {
     App::build()

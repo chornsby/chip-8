@@ -10,3 +10,5 @@ Rust without following an explicit step-by-step tutorial.
 - http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
 - https://wjdevschool.com/blog/video-game-console-emulator/
 - https://stackoverflow.com/a/34666891
+- https://www.zophar.net/pdroms/chip8.html
+- https://en.wikipedia.org/wiki/CHIP-8

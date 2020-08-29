@@ -11,7 +11,7 @@ pub struct Emulator {
     delay: u8,
     sound: u8,
     program_counter: usize,
-    stack: Vec<u16>,
+    stack: Vec<usize>,
 }
 
 impl Emulator {
@@ -43,16 +43,103 @@ impl Emulator {
 
         println!("0x{:X}", instruction);
 
-        match instruction {
-            0x1000..=0x1FFF => {
-                let addr = instruction & 0xFFF;
-                self.program_counter = addr as usize;
-                return;
-            }
+        self.program_counter = match instruction {
+            0x1000..=0x1FFF => self.jp(instruction),
+            0x2000..=0x2FFF => self.call(instruction),
+            0x6000..=0x6FFF => self.ld_v(instruction),
+            0x7000..=0x7FFF => self.add_v(instruction),
+            0x8000..=0x8FFF => match instruction & 0xF {
+                0x3 => self.xor_v_v(instruction),
+                _ => panic!("Unknown instruction 0x{:X}", instruction),
+            },
+            0xA000..=0xAFFF => self.ld_i(instruction),
+            0xF000..=0xFFFF => match instruction & 0xFF {
+                0x1E => self.add_i_v(instruction),
+                0x55 => self.ld_i_v(instruction),
+                0x65 => self.ld_v_i(instruction),
+                _ => panic!("Unknown instruction 0x{:X}", instruction),
+            },
             _ => panic!("Unknown instruction 0x{:X}", instruction),
         }
+    }
 
-        self.program_counter += 2;
+    /// Jumps the program counter to nnn (0x1nnn)
+    fn jp(&self, instruction: u16) -> usize {
+        let addr = instruction & 0xFFF;
+        addr as usize
+    }
+
+    /// Calls subroutine at nnn (0x2nnn)
+    fn call(&mut self, instruction: u16) -> usize {
+        let addr = instruction & 0xFFF;
+
+        self.stack.push(self.program_counter);
+        addr as usize
+    }
+
+    /// Loads Vx to kk (0x6xkk)
+    fn ld_v(&mut self, instruction: u16) -> usize {
+        let vx = (instruction >> 8) & 0xF;
+        let byte = (instruction & 0xFF) as u8;
+
+        self.registers[vx as usize] = byte;
+        self.program_counter + 2
+    }
+
+    /// Adds kk to Vx (0x7xkk)
+    fn add_v(&mut self, instruction: u16) -> usize {
+        let vx = (instruction >> 8) & 0xF;
+        let byte = (instruction & 0xFF) as u8;
+
+        self.registers[vx as usize] = self.registers[vx as usize].wrapping_add(byte);
+        self.program_counter + 2
+    }
+
+    /// Stores xor of Vx and Vy in Vx (0x8xy3)
+    fn xor_v_v(&mut self, instruction: u16) -> usize {
+        let vx = (instruction >> 8) & 0xF;
+        let vy = (instruction >> 4) & 0xF;
+
+        self.registers[vx as usize] ^= self.registers[vy as usize];
+        self.program_counter + 2
+    }
+
+    /// Loads Vi to nnn (0xAnnn)
+    fn ld_i(&mut self, instruction: u16) -> usize {
+        let addr = instruction & 0xFFF;
+
+        self.i = addr;
+        self.program_counter + 2
+    }
+
+    /// Adds Vx to Vi (0xFx1E)
+    fn add_i_v(&mut self, instruction: u16) -> usize {
+        let vx = (instruction >> 8) & 0xF;
+
+        self.i = self.i.wrapping_add(self.registers[vx as usize] as u16);
+        self.program_counter + 2
+    }
+
+    /// Loads [V0, Vx] to memory starting at Vi (0xFx55)
+    fn ld_i_v(&mut self, instruction: u16) -> usize {
+        let vx = (instruction >> 8) & 0xF;
+
+        for index in 0..=vx {
+            self.memory[(self.i + index) as usize] = self.registers[index as usize]
+        }
+
+        self.program_counter + 2
+    }
+
+    /// Loads memory starting at Vi to [V0, Vx] (0xFx65)
+    fn ld_v_i(&mut self, instruction: u16) -> usize {
+        let vx = (instruction >> 8) & 0xF;
+
+        for index in 0..=vx {
+            self.registers[index as usize] = self.memory[(self.i + index) as usize]
+        }
+
+        self.program_counter + 2
     }
 }
 

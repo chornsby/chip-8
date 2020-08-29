@@ -80,7 +80,7 @@ impl Emulator {
         addr as usize
     }
 
-    /// Loads Vx to kk (0x6xkk)
+    /// Loads kk to Vx (0x6xkk)
     fn ld_v(&mut self, instruction: u16) -> usize {
         let vx = (instruction >> 8) & 0xF;
         let byte = (instruction & 0xFF) as u8;

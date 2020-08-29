@@ -83,7 +83,7 @@ impl Emulator {
 
     /// Skip an instruction if Vx == kk (0x3xkk)
     fn se_v(&mut self, instruction: u16) -> usize {
-        let vx = (instruction >> 8) & 0xF;
+        let vx = instruction >> 8 & 0xF;
         let byte = (instruction & 0xFF) as u8;
 
         if self.registers[vx as usize] == byte {
@@ -95,7 +95,7 @@ impl Emulator {
 
     /// Loads kk to Vx (0x6xkk)
     fn ld_v(&mut self, instruction: u16) -> usize {
-        let vx = (instruction >> 8) & 0xF;
+        let vx = instruction >> 8 & 0xF;
         let byte = (instruction & 0xFF) as u8;
 
         self.registers[vx as usize] = byte;
@@ -104,7 +104,7 @@ impl Emulator {
 
     /// Adds kk to Vx (0x7xkk)
     fn add_v(&mut self, instruction: u16) -> usize {
-        let vx = (instruction >> 8) & 0xF;
+        let vx = instruction >> 8 & 0xF;
         let byte = (instruction & 0xFF) as u8;
 
         self.registers[vx as usize] = self.registers[vx as usize].wrapping_add(byte);
@@ -113,8 +113,8 @@ impl Emulator {
 
     /// Stores xor of Vx and Vy in Vx (0x8xy3)
     fn xor_v_v(&mut self, instruction: u16) -> usize {
-        let vx = (instruction >> 8) & 0xF;
-        let vy = (instruction >> 4) & 0xF;
+        let vx = instruction >> 8 & 0xF;
+        let vy = instruction >> 4 & 0xF;
 
         self.registers[vx as usize] ^= self.registers[vy as usize];
         self.program_counter + 2
@@ -130,7 +130,7 @@ impl Emulator {
 
     /// Adds Vx to Vi (0xFx1E)
     fn add_i_v(&mut self, instruction: u16) -> usize {
-        let vx = (instruction >> 8) & 0xF;
+        let vx = instruction >> 8 & 0xF;
 
         self.i = self.i.wrapping_add(self.registers[vx as usize] as u16);
         self.program_counter + 2
@@ -138,7 +138,7 @@ impl Emulator {
 
     /// Loads [V0, Vx] to memory starting at Vi (0xFx55)
     fn ld_i_v(&mut self, instruction: u16) -> usize {
-        let vx = (instruction >> 8) & 0xF;
+        let vx = instruction >> 8 & 0xF;
 
         for index in 0..=vx {
             self.memory[(self.i + index) as usize] = self.registers[index as usize]
@@ -149,7 +149,7 @@ impl Emulator {
 
     /// Loads memory starting at Vi to [V0, Vx] (0xFx65)
     fn ld_v_i(&mut self, instruction: u16) -> usize {
-        let vx = (instruction >> 8) & 0xF;
+        let vx = instruction >> 8 & 0xF;
 
         for index in 0..=vx {
             self.registers[index as usize] = self.memory[(self.i + index) as usize]

@@ -43,6 +43,9 @@ impl Emulator {
 
         println!("0x{:X}", instruction);
 
+        self.delay = self.delay.saturating_sub(1);
+        self.sound = self.sound.saturating_sub(1);
+
         self.program_counter = match instruction {
             0x1000..=0x1FFF => self.jp(instruction),
             0x2000..=0x2FFF => self.call(instruction),

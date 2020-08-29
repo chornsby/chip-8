@@ -8,8 +8,8 @@ pub struct Emulator {
     memory: [u8; MEMORY_SIZE],
     registers: [u8; 16],
     i: u16,
-    delay: u8,
-    sound: u8,
+    delay_timer: u8,
+    sound_timer: u8,
     program_counter: usize,
     stack: Vec<usize>,
 }
@@ -26,8 +26,8 @@ impl Emulator {
             memory,
             registers: [0; 16],
             i: 0,
-            delay: 0,
-            sound: 0,
+            delay_timer: 0,
+            sound_timer: 0,
             program_counter: PROGRAM_OFFSET,
             stack: vec![],
         }
@@ -43,8 +43,8 @@ impl Emulator {
 
         println!("0x{:X}", instruction);
 
-        self.delay = self.delay.saturating_sub(1);
-        self.sound = self.sound.saturating_sub(1);
+        self.delay_timer = self.delay_timer.saturating_sub(1);
+        self.sound_timer = self.sound_timer.saturating_sub(1);
 
         self.program_counter = match instruction {
             0x1000..=0x1FFF => self.jp(instruction),

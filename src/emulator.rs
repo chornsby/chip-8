@@ -120,7 +120,7 @@ impl Emulator {
         self.program_counter + 2
     }
 
-    /// Loads Vi to nnn (0xAnnn)
+    /// Loads nnn to Vi (0xAnnn)
     fn ld_i(&mut self, instruction: u16) -> usize {
         let addr = instruction & 0xFFF;
 
@@ -161,4 +161,152 @@ impl Emulator {
 
 pub fn emulator_system(mut emulator: ResMut<Emulator>, keyboard: Res<KeyboardState>) {
     emulator.tick(&keyboard);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_jp() {
+        let mut emulator = Emulator::new(&[0x12, 0x34]);
+        let keyboard = KeyboardState::default();
+
+        emulator.tick(&keyboard);
+
+        assert_eq!(emulator.program_counter, 0x234);
+        assert_eq!(emulator.stack, vec![]);
+    }
+
+    #[test]
+    fn test_call() {
+        let mut emulator = Emulator::new(&[0x23, 0x45]);
+        let keyboard = KeyboardState::default();
+
+        emulator.tick(&keyboard);
+
+        assert_eq!(emulator.program_counter, 0x345);
+        assert_eq!(emulator.stack, vec![0x200]);
+    }
+
+    #[test]
+    fn test_se_v_equal() {
+        let mut emulator = Emulator::new(&[0x34, 0x56]);
+        emulator.registers[0x4] = 0x56;
+        let keyboard = KeyboardState::default();
+
+        emulator.tick(&keyboard);
+
+        assert_eq!(emulator.program_counter, 0x204);
+    }
+
+    #[test]
+    fn test_se_v_not_equal() {
+        let mut emulator = Emulator::new(&[0x34, 0x56]);
+        emulator.registers[0x4] = 0x65;
+        let keyboard = KeyboardState::default();
+
+        emulator.tick(&keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
+    }
+
+    #[test]
+    fn test_ld_v() {
+        let mut emulator = Emulator::new(&[0x67, 0x89]);
+        let keyboard = KeyboardState::default();
+
+        emulator.tick(&keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
+        assert_eq!(emulator.registers[0x7], 0x89);
+    }
+
+    #[test]
+    fn test_add_v() {
+        let mut emulator = Emulator::new(&[0x78, 0x9A, 0x78, 0x9A]);
+        let keyboard = KeyboardState::default();
+
+        emulator.tick(&keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
+        assert_eq!(emulator.registers[0x8], 0x9A);
+
+        emulator.tick(&keyboard);
+
+        assert_eq!(emulator.program_counter, 0x204);
+        assert_eq!(emulator.registers[0x8], 0x34);
+    }
+
+    #[test]
+    fn test_xor_v_v() {
+        let mut emulator = Emulator::new(&[0x89, 0xA3]);
+        emulator.registers[0x9] = 0b11110000;
+        emulator.registers[0xA] = 0b11001100;
+        let keyboard = KeyboardState::default();
+
+        emulator.tick(&keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
+        assert_eq!(emulator.registers[0x9], 0b00111100);
+    }
+
+    #[test]
+    fn test_ld_i() {
+        let mut emulator = Emulator::new(&[0xAB, 0xCD]);
+        let keyboard = KeyboardState::default();
+
+        emulator.tick(&keyboard);
+
+        assert_eq!(emulator.i, 0xBCD);
+        assert_eq!(emulator.program_counter, 0x202);
+    }
+
+    #[test]
+    fn test_add_i_v() {
+        let mut emulator = Emulator::new(&[0xF5, 0x1E]);
+        emulator.i = 0x9A;
+        emulator.registers[0x5] = 0x9A;
+        let keyboard = KeyboardState::default();
+
+        emulator.tick(&keyboard);
+
+        assert_eq!(emulator.i, 0x134);
+        assert_eq!(emulator.program_counter, 0x202);
+        assert_eq!(emulator.registers[0xF], 0);
+    }
+
+    #[test]
+    fn test_ld_i_v() {
+        let mut emulator = Emulator::new(&[0xF8, 0x55]);
+        emulator.i = 0x400;
+        emulator.registers[0x0] = 0x1;
+        emulator.registers[0x4] = 0x5;
+        emulator.registers[0x8] = 0x9;
+        let keyboard = KeyboardState::default();
+
+        emulator.tick(&keyboard);
+
+        assert_eq!(emulator.memory[0x400], 0x1);
+        assert_eq!(emulator.memory[0x404], 0x5);
+        assert_eq!(emulator.memory[0x408], 0x9);
+        assert_eq!(emulator.program_counter, 0x202);
+    }
+
+    #[test]
+    fn test_ld_v_i() {
+        let mut emulator = Emulator::new(&[0xF8, 0x65]);
+        emulator.i = 0x400;
+        emulator.memory[0x400] = 0x1;
+        emulator.memory[0x404] = 0x5;
+        emulator.memory[0x408] = 0x9;
+        let keyboard = KeyboardState::default();
+
+        emulator.tick(&keyboard);
+
+        assert_eq!(emulator.registers[0x0], 0x1);
+        assert_eq!(emulator.registers[0x4], 0x5);
+        assert_eq!(emulator.registers[0x8], 0x9);
+        assert_eq!(emulator.program_counter, 0x202);
+    }
 }

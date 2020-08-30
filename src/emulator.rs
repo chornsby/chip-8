@@ -148,7 +148,7 @@ impl Emulator {
         self.program_counter + 2
     }
 
-    /// Stores xor of Vx and Vy in Vx (0x8xy3)
+    /// Stores bitwise XOR of Vx and Vy in Vx (0x8xy3)
     fn xor_v_v(&mut self, instruction: u16) -> usize {
         let vx = instruction >> 8 & 0xF;
         let vy = instruction >> 4 & 0xF;

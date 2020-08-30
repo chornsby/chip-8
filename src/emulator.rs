@@ -41,7 +41,7 @@ impl Emulator {
             (byte_1 as u16) << 8 | byte_2 as u16
         };
 
-        println!("0x{:X}", instruction);
+        println!("{}: {:#04X}", self.program_counter, instruction);
 
         self.delay_timer = self.delay_timer.saturating_sub(1);
         self.sound_timer = self.sound_timer.saturating_sub(1);

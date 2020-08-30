@@ -58,6 +58,7 @@ impl Emulator {
             0x8000..=0x8FFF => match instruction & 0xF {
                 0x0 => self.ld_v_v(instruction),
                 0x3 => self.xor_v_v(instruction),
+                0x6 => self.shr_v_v(instruction),
                 _ => panic!("Unknown instruction 0x{:X}", instruction),
             },
             0xA000..=0xAFFF => self.ld_i(instruction),
@@ -141,6 +142,15 @@ impl Emulator {
         let vy = instruction >> 4 & 0xF;
 
         self.registers[vx as usize] ^= self.registers[vy as usize];
+        self.program_counter + 2
+    }
+
+    /// Shifts Vx to the right with carry (0x8xy6)
+    fn shr_v_v(&mut self, instruction: u16) -> usize {
+        let vx = instruction >> 8 & 0xF;
+
+        self.registers[0xF] = self.registers[vx as usize] % 2;
+        self.registers[vx as usize] >>= 1;
         self.program_counter + 2
     }
 
@@ -324,6 +334,26 @@ mod tests {
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0x9], 0b00111100);
+    }
+
+    #[test]
+    fn test_shr_v_v() {
+        let mut emulator = Emulator::new(&[0x89, 0xA6, 0x89, 0xA6]);
+        emulator.registers[0x9] = 0b00000101;
+        let mut display = DisplayState::default();
+        let keyboard = KeyboardState::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
+        assert_eq!(emulator.registers[0x9], 0b00000010);
+        assert_eq!(emulator.registers[0xF], 1);
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x204);
+        assert_eq!(emulator.registers[0x9], 0b00000001);
+        assert_eq!(emulator.registers[0xF], 0);
     }
 
     #[test]

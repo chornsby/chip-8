@@ -1,6 +1,6 @@
 /// Stores the current lit state of every pixel on the Chip-8 display
 pub struct DisplayState {
-    pixels: [[bool; 640]; 320],
+    pub pixels: [[bool; 640]; 320],
 }
 
 impl Default for DisplayState {

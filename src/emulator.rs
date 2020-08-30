@@ -56,6 +56,7 @@ impl Emulator {
             0x6000..=0x6FFF => self.ld_v(instruction),
             0x7000..=0x7FFF => self.add_v(instruction),
             0x8000..=0x8FFF => match instruction & 0xF {
+                0x0 => self.ld_v_v(instruction),
                 0x3 => self.xor_v_v(instruction),
                 _ => panic!("Unknown instruction 0x{:X}", instruction),
             },
@@ -122,6 +123,15 @@ impl Emulator {
         let byte = (instruction & 0xFF) as u8;
 
         self.registers[vx as usize] = self.registers[vx as usize].wrapping_add(byte);
+        self.program_counter + 2
+    }
+
+    /// Sets Vy to Vx (0x8xy0)
+    fn ld_v_v(&mut self, instruction: u16) -> usize {
+        let vx = instruction >> 8 & 0xF;
+        let vy = instruction >> 4 & 0xF;
+
+        self.registers[vx as usize] = self.registers[vy as usize];
         self.program_counter + 2
     }
 
@@ -286,6 +296,20 @@ mod tests {
 
         assert_eq!(emulator.program_counter, 0x204);
         assert_eq!(emulator.registers[0x8], 0x34);
+    }
+
+    #[test]
+    fn test_ld_v_v() {
+        let mut emulator = Emulator::new(&[0x89, 0xA0]);
+        emulator.registers[0x9] = 0x20;
+        emulator.registers[0xA] = 0x40;
+        let mut display = DisplayState::default();
+        let keyboard = KeyboardState::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
+        assert_eq!(emulator.registers[0x9], 0x40);
     }
 
     #[test]

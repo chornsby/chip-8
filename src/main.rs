@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::render::pass::ClearColor;
 use bevy::window::WindowMode;
 
+mod display;
 mod emulator;
 mod keyboard;
 
@@ -19,6 +20,7 @@ fn main() {
             ..Default::default()
         })
         .add_default_plugins()
+        .init_resource::<display::DisplayState>()
         .init_resource::<keyboard::KeyboardState>()
         .add_system(keyboard::read_input_system.system())
         .add_resource(emulator::Emulator::new(&rom))

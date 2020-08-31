@@ -1,5 +1,5 @@
-use crate::display::DisplayState;
-use crate::keyboard::KeyboardState;
+use crate::display::Display;
+use crate::keyboard::Keyboard;
 
 const MEMORY_SIZE: usize = 0x1000;
 const PROGRAM_OFFSET: usize = 0x200;
@@ -33,7 +33,7 @@ impl Emulator {
         }
     }
 
-    pub fn tick(&mut self, display: &mut DisplayState, _keyboard: &KeyboardState) {
+    pub fn tick(&mut self, display: &mut Display, _keyboard: &Keyboard) {
         let instruction = {
             let byte_1 = self.memory[self.program_counter];
             let byte_2 = self.memory[self.program_counter + 1];
@@ -74,7 +74,7 @@ impl Emulator {
     }
 
     /// Clears the display
-    fn cls(&self, display: &mut DisplayState) -> usize {
+    fn cls(&self, display: &mut Display) -> usize {
         display.clear();
         self.program_counter + 2
     }
@@ -220,9 +220,9 @@ mod tests {
     #[test]
     fn test_cls() {
         let mut emulator = Emulator::new(&[0x00, 0xE0]);
-        let mut display = DisplayState::default();
+        let mut display = Display::default();
         display.pixels[0][0] = true;
-        let keyboard = KeyboardState::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 
@@ -234,8 +234,8 @@ mod tests {
     fn test_ret() {
         let mut emulator = Emulator::new(&[0x00, 0xEE]);
         emulator.stack.push(0x400);
-        let mut display = DisplayState::default();
-        let keyboard = KeyboardState::default();
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 
@@ -246,8 +246,8 @@ mod tests {
     #[test]
     fn test_jp() {
         let mut emulator = Emulator::new(&[0x12, 0x34]);
-        let mut display = DisplayState::default();
-        let keyboard = KeyboardState::default();
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 
@@ -258,8 +258,8 @@ mod tests {
     #[test]
     fn test_call() {
         let mut emulator = Emulator::new(&[0x23, 0x45]);
-        let mut display = DisplayState::default();
-        let keyboard = KeyboardState::default();
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 
@@ -271,8 +271,8 @@ mod tests {
     fn test_se_v_equal() {
         let mut emulator = Emulator::new(&[0x34, 0x56]);
         emulator.registers[0x4] = 0x56;
-        let mut display = DisplayState::default();
-        let keyboard = KeyboardState::default();
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 
@@ -283,8 +283,8 @@ mod tests {
     fn test_se_v_not_equal() {
         let mut emulator = Emulator::new(&[0x34, 0x56]);
         emulator.registers[0x4] = 0x65;
-        let mut display = DisplayState::default();
-        let keyboard = KeyboardState::default();
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 
@@ -294,8 +294,8 @@ mod tests {
     #[test]
     fn test_ld_v() {
         let mut emulator = Emulator::new(&[0x67, 0x89]);
-        let mut display = DisplayState::default();
-        let keyboard = KeyboardState::default();
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 
@@ -306,8 +306,8 @@ mod tests {
     #[test]
     fn test_add_v() {
         let mut emulator = Emulator::new(&[0x78, 0x9A, 0x78, 0x9A]);
-        let mut display = DisplayState::default();
-        let keyboard = KeyboardState::default();
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 
@@ -325,8 +325,8 @@ mod tests {
         let mut emulator = Emulator::new(&[0x89, 0xA0]);
         emulator.registers[0x9] = 0x20;
         emulator.registers[0xA] = 0x40;
-        let mut display = DisplayState::default();
-        let keyboard = KeyboardState::default();
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 
@@ -339,8 +339,8 @@ mod tests {
         let mut emulator = Emulator::new(&[0x89, 0xA2]);
         emulator.registers[0x9] = 0b11110000;
         emulator.registers[0xA] = 0b11001100;
-        let mut display = DisplayState::default();
-        let keyboard = KeyboardState::default();
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 
@@ -353,8 +353,8 @@ mod tests {
         let mut emulator = Emulator::new(&[0x89, 0xA3]);
         emulator.registers[0x9] = 0b11110000;
         emulator.registers[0xA] = 0b11001100;
-        let mut display = DisplayState::default();
-        let keyboard = KeyboardState::default();
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 
@@ -366,8 +366,8 @@ mod tests {
     fn test_shr_v_v() {
         let mut emulator = Emulator::new(&[0x89, 0xA6, 0x89, 0xA6]);
         emulator.registers[0x9] = 0b00000101;
-        let mut display = DisplayState::default();
-        let keyboard = KeyboardState::default();
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 
@@ -386,8 +386,8 @@ mod tests {
     fn test_shl_v_v() {
         let mut emulator = Emulator::new(&[0x89, 0xAE, 0x89, 0xAE]);
         emulator.registers[0x9] = 0b10100000;
-        let mut display = DisplayState::default();
-        let keyboard = KeyboardState::default();
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 
@@ -405,8 +405,8 @@ mod tests {
     #[test]
     fn test_ld_i() {
         let mut emulator = Emulator::new(&[0xAB, 0xCD]);
-        let mut display = DisplayState::default();
-        let keyboard = KeyboardState::default();
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 
@@ -419,8 +419,8 @@ mod tests {
         let mut emulator = Emulator::new(&[0xF5, 0x1E]);
         emulator.i = 0x9A;
         emulator.registers[0x5] = 0x9A;
-        let mut display = DisplayState::default();
-        let keyboard = KeyboardState::default();
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 
@@ -436,8 +436,8 @@ mod tests {
         emulator.registers[0x0] = 0x1;
         emulator.registers[0x4] = 0x5;
         emulator.registers[0x8] = 0x9;
-        let mut display = DisplayState::default();
-        let keyboard = KeyboardState::default();
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 
@@ -454,8 +454,8 @@ mod tests {
         emulator.memory[0x400] = 0x1;
         emulator.memory[0x404] = 0x5;
         emulator.memory[0x408] = 0x9;
-        let mut display = DisplayState::default();
-        let keyboard = KeyboardState::default();
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);
 

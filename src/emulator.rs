@@ -1,6 +1,5 @@
 use crate::display::DisplayState;
 use crate::keyboard::KeyboardState;
-use bevy::prelude::*;
 
 const MEMORY_SIZE: usize = 0x1000;
 const PROGRAM_OFFSET: usize = 0x200;
@@ -212,14 +211,6 @@ impl Emulator {
 
         self.program_counter + 2
     }
-}
-
-pub fn emulator_system(
-    mut emulator: ResMut<Emulator>,
-    mut display: ResMut<DisplayState>,
-    keyboard: Res<KeyboardState>,
-) {
-    emulator.tick(&mut display, &keyboard);
 }
 
 #[cfg(test)]

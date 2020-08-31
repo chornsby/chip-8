@@ -4,3 +4,5 @@ version = "0.1.0"
 authors = ["chornsby"]
 edition = "2018"
 
+[dependencies]
+sdl2 = "0.34.3"

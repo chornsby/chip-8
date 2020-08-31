@@ -12,3 +12,4 @@ Rust without following an explicit step-by-step tutorial.
 - https://stackoverflow.com/a/34666891
 - https://www.zophar.net/pdroms/chip8.html
 - https://en.wikipedia.org/wiki/CHIP-8
+- https://sunjay.dev/learn-game-dev/opening-a-window.html

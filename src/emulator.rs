@@ -57,6 +57,7 @@ impl Emulator {
             0x7000..=0x7FFF => self.add_v(instruction),
             0x8000..=0x8FFF => match instruction & 0xF {
                 0x0 => self.ld_v_v(instruction),
+                0x1 => self.or_v_v(instruction),
                 0x2 => self.and_v_v(instruction),
                 0x3 => self.xor_v_v(instruction),
                 0x6 => self.shr_v_v(instruction),
@@ -148,6 +149,15 @@ impl Emulator {
         let vy = instruction >> 4 & 0xF;
 
         self.registers[vx as usize] = self.registers[vy as usize];
+        self.program_counter + 2
+    }
+
+    /// Stores bitwise OR of Vx and Vy to Vx (0x8xy1)
+    fn or_v_v(&mut self, instruction: u16) -> usize {
+        let vx = instruction >> 8 & 0xF;
+        let vy = instruction >> 4 & 0xF;
+
+        self.registers[vx as usize] |= self.registers[vy as usize];
         self.program_counter + 2
     }
 
@@ -401,6 +411,20 @@ mod tests {
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0x9], 0x40);
+    }
+
+    #[test]
+    fn test_or_v_v() {
+        let mut emulator = Emulator::new(&[0x89, 0xA1]);
+        emulator.registers[0x9] = 0b11110000;
+        emulator.registers[0xA] = 0b11001100;
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
+        assert_eq!(emulator.registers[0x9], 0b11111100);
     }
 
     #[test]

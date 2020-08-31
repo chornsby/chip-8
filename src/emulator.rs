@@ -52,6 +52,7 @@ impl Emulator {
             0x1000..=0x1FFF => self.jp(instruction),
             0x2000..=0x2FFF => self.call(instruction),
             0x3000..=0x3FFF => self.se_v(instruction),
+            0x4000..=0x4FFF => self.sne_v(instruction),
             0x6000..=0x6FFF => self.ld_v(instruction),
             0x7000..=0x7FFF => self.add_v(instruction),
             0x8000..=0x8FFF => match instruction & 0xF {
@@ -99,7 +100,7 @@ impl Emulator {
         addr as usize
     }
 
-    /// Skip an instruction if Vx == kk (0x3xkk)
+    /// Skips an instruction if Vx == kk (0x3xkk)
     fn se_v(&mut self, instruction: u16) -> usize {
         let vx = instruction >> 8 & 0xF;
         let byte = (instruction & 0xFF) as u8;
@@ -108,6 +109,18 @@ impl Emulator {
             self.program_counter + 4
         } else {
             self.program_counter + 2
+        }
+    }
+
+    /// Skips an instruction if Vx != kk (0x4xkk)
+    fn sne_v(&mut self, instruction: u16) -> usize {
+        let vx = instruction >> 8 & 0xF;
+        let byte = (instruction & 0xFF) as u8;
+
+        if self.registers[vx as usize] == byte {
+            self.program_counter + 2
+        } else {
+            self.program_counter + 4
         }
     }
 
@@ -321,6 +334,30 @@ mod tests {
         emulator.tick(&mut display, &keyboard);
 
         assert_eq!(emulator.program_counter, 0x202);
+    }
+
+    #[test]
+    fn test_sne_v_equal() {
+        let mut emulator = Emulator::new(&[0x45, 0x67]);
+        emulator.registers[0x5] = 0x67;
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
+    }
+
+    #[test]
+    fn test_sne_v_not_equal() {
+        let mut emulator = Emulator::new(&[0x45, 0x67]);
+        emulator.registers[0x5] = 0x76;
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x204);
     }
 
     #[test]

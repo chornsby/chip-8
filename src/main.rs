@@ -1,4 +1,6 @@
 use sdl2::event::Event;
+use sdl2::pixels::Color;
+use sdl2::rect::Rect;
 
 mod display;
 mod emulator;
@@ -39,6 +41,17 @@ fn main() -> Result<(), String> {
         emulator.tick(&mut display, &keyboard);
 
         // Render
+        canvas.set_draw_color(Color::BLACK);
+        canvas.clear();
+        canvas.set_draw_color(Color::WHITE);
+        for (y, &row) in display.pixels.iter().enumerate() {
+            for (x, &is_lit) in row.iter().enumerate() {
+                if is_lit {
+                    canvas.fill_rect(Rect::new(x as i32 * 10, y as i32 * 10, 10, 10))?;
+                }
+            }
+        }
+
         canvas.present();
     }
 

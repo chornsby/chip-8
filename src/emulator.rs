@@ -63,6 +63,7 @@ impl Emulator {
                 _ => panic!("Unknown instruction 0x{:X}", instruction),
             },
             0xA000..=0xAFFF => self.ld_i(instruction),
+            0xD000..=0xDFFF => self.drw(instruction, display),
             0xF000..=0xFFFF => match instruction & 0xFF {
                 0x1E => self.add_i_v(instruction),
                 0x55 => self.ld_i_v(instruction),
@@ -179,6 +180,37 @@ impl Emulator {
         let addr = instruction & 0xFFF;
 
         self.i = addr;
+        self.program_counter + 2
+    }
+
+    /// Draws n-byte sprite from Vi at Vx, Vy (0xDxyn)
+    fn drw(&mut self, instruction: u16, display: &mut Display) -> usize {
+        let vx = instruction >> 8 & 0xF;
+        let vy = instruction >> 4 & 0xF;
+        let n = instruction & 0xF;
+
+        let x = self.registers[vx as usize] as usize;
+        let y = self.registers[vy as usize] as usize;
+        let mut vf = false;
+
+        for index in self.i..self.i + n + 1 {
+            let byte = self.memory[index as usize];
+
+            for i in 0..8 {
+                let x = (x + 7 - i) % 64;
+                let bit = (byte >> i & 0xF) != 0;
+
+                let before = display.pixels[y][x];
+                display.pixels[y][x] ^= bit;
+                let after = display.pixels[y][x];
+
+                if before && !after {
+                    vf = true;
+                }
+            }
+        }
+
+        self.registers[0xF] = vf as u8;
         self.program_counter + 2
     }
 

@@ -1,6 +1,7 @@
 use sdl2::event::Event;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
+use std::time::{Duration, Instant};
 
 mod display;
 mod emulator;
@@ -28,7 +29,11 @@ fn main() -> Result<(), String> {
     let mut display = display::Display::default();
     let keyboard = keyboard::Keyboard::default();
 
+    let target_frame_time = Duration::from_secs(1) / 60;
+
     'is_running: loop {
+        let frame_start = Instant::now();
+
         // Input
         for event in event_pump.poll_iter() {
             match event {
@@ -37,10 +42,13 @@ fn main() -> Result<(), String> {
             }
         }
 
-        // Update
-        emulator.tick(&mut display, &keyboard);
+        // Update at 480Hz
+        for _ in 0..8 {
+            emulator.tick(&mut display, &keyboard);
+        }
+        emulator.decrement_timers();
 
-        // Render
+        // Render at 60Hz
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
         canvas.set_draw_color(Color::WHITE);
@@ -53,6 +61,11 @@ fn main() -> Result<(), String> {
         }
 
         canvas.present();
+
+        // Framerate
+        if Instant::now() - frame_start < target_frame_time {
+            std::thread::sleep(Instant::now() - frame_start);
+        }
     }
 
     Ok(())

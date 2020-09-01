@@ -33,6 +33,11 @@ impl Emulator {
         }
     }
 
+    pub fn decrement_timers(&mut self) {
+        self.delay_timer = self.delay_timer.saturating_sub(1);
+        self.sound_timer = self.sound_timer.saturating_sub(1);
+    }
+
     pub fn tick(&mut self, display: &mut Display, _keyboard: &Keyboard) {
         let instruction = {
             let byte_1 = self.memory[self.program_counter];
@@ -42,9 +47,6 @@ impl Emulator {
         };
 
         println!("{}: {:#04X}", self.program_counter, instruction);
-
-        self.delay_timer = self.delay_timer.saturating_sub(1);
-        self.sound_timer = self.sound_timer.saturating_sub(1);
 
         self.program_counter = match instruction {
             0x00E0 => self.cls(display),

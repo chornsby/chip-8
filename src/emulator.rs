@@ -225,16 +225,16 @@ impl Emulator {
         let vy = instruction >> 4 & 0xF;
         let n = instruction & 0xF;
 
-        let x = self.registers[vx as usize] as usize;
+        let mut x = self.registers[vx as usize] as usize;
         let y = self.registers[vy as usize] as usize;
         let mut vf = false;
 
-        for index in self.i..self.i + n + 1 {
+        for index in self.i..self.i + n {
             let byte = self.memory[index as usize];
 
             for i in 0..8 {
                 let x = (x + 7 - i) % 64;
-                let bit = (byte >> i & 0xF) != 0;
+                let bit = (byte >> i) % 2 == 1;
 
                 let before = display.pixels[y][x];
                 display.pixels[y][x] ^= bit;
@@ -244,6 +244,8 @@ impl Emulator {
                     vf = true;
                 }
             }
+
+            x += 8;
         }
 
         self.registers[0xF] = vf as u8;
@@ -538,6 +540,40 @@ mod tests {
         emulator.tick(&mut display, &keyboard);
 
         assert_eq!(emulator.i, 0xBCD);
+        assert_eq!(emulator.program_counter, 0x202);
+    }
+
+    #[test]
+    fn test_drw() {
+        let mut emulator = Emulator::new(&[0xDA, 0xB2]);
+        emulator.i = 0x400;
+        emulator.memory[0x400] = 0b11110000;
+        emulator.memory[0x401] = 0b11001100;
+        emulator.registers[0xA] = 0x3E;
+        emulator.registers[0xB] = 0x2;
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(display.pixels[0x2][0x3E], true);
+        assert_eq!(display.pixels[0x2][0x3F], true);
+        assert_eq!(display.pixels[0x2][0x0], true);
+        assert_eq!(display.pixels[0x2][0x1], true);
+        assert_eq!(display.pixels[0x2][0x2], false);
+        assert_eq!(display.pixels[0x2][0x3], false);
+        assert_eq!(display.pixels[0x2][0x4], false);
+        assert_eq!(display.pixels[0x2][0x5], false);
+
+        assert_eq!(display.pixels[0x2][0x6], true);
+        assert_eq!(display.pixels[0x2][0x7], true);
+        assert_eq!(display.pixels[0x2][0x8], false);
+        assert_eq!(display.pixels[0x2][0x9], false);
+        assert_eq!(display.pixels[0x2][0xA], true);
+        assert_eq!(display.pixels[0x2][0xB], true);
+        assert_eq!(display.pixels[0x2][0xC], false);
+        assert_eq!(display.pixels[0x2][0xD], false);
+
         assert_eq!(emulator.program_counter, 0x202);
     }
 

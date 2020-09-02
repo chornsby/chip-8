@@ -1,5 +1,6 @@
 use crate::display::Display;
 use crate::keyboard::Keyboard;
+use rand::Rng;
 
 const MEMORY_SIZE: usize = 0x1000;
 const PROGRAM_OFFSET: usize = 0x200;
@@ -66,6 +67,7 @@ impl Emulator {
                 _ => panic!("Unknown instruction 0x{:X}", instruction),
             },
             0xA000..=0xAFFF => self.ld_i(instruction),
+            0xC000..=0xCFFF => self.rnd_v(instruction),
             0xD000..=0xDFFF => self.drw(instruction, display),
             0xE000..=0xEFFF => match instruction & 0xFF {
                 0xA1 => self.sknp_v(instruction, keyboard),
@@ -220,6 +222,15 @@ impl Emulator {
         let addr = instruction & 0xFFF;
 
         self.i = addr;
+        self.program_counter + 2
+    }
+
+    /// Randomly generates a random number to store in Vx (0xCxkk)
+    fn rnd_v(&mut self, instruction: u16) -> usize {
+        let vx = instruction >> 8 & 0xF;
+        let byte = (instruction & 0xFF) as u8;
+
+        self.registers[vx as usize] = rand::thread_rng().gen::<u8>() & byte;
         self.program_counter + 2
     }
 

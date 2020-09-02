@@ -63,8 +63,11 @@ fn main() -> Result<(), String> {
         canvas.present();
 
         // Framerate
-        if Instant::now() - frame_start < target_frame_time {
-            std::thread::sleep(Instant::now() - frame_start);
+        let frame_end = Instant::now();
+        let frame_time = frame_end - frame_start;
+
+        if frame_time < target_frame_time {
+            std::thread::sleep(target_frame_time - frame_time);
         }
     }
 

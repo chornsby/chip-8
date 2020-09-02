@@ -38,7 +38,7 @@ impl Emulator {
         self.sound_timer = self.sound_timer.saturating_sub(1);
     }
 
-    pub fn tick(&mut self, display: &mut Display, _keyboard: &Keyboard) {
+    pub fn tick(&mut self, display: &mut Display, keyboard: &Keyboard) {
         let instruction = {
             let byte_1 = self.memory[self.program_counter];
             let byte_2 = self.memory[self.program_counter + 1];
@@ -67,6 +67,10 @@ impl Emulator {
             },
             0xA000..=0xAFFF => self.ld_i(instruction),
             0xD000..=0xDFFF => self.drw(instruction, display),
+            0xE000..=0xEFFF => match instruction & 0xFF {
+                0xA1 => self.sknp_v(instruction, keyboard),
+                _ => panic!("Unknown instruction 0x{:X}", instruction),
+            },
             0xF000..=0xFFFF => match instruction & 0xFF {
                 0x1E => self.add_i_v(instruction),
                 0x55 => self.ld_i_v(instruction),
@@ -249,6 +253,17 @@ impl Emulator {
 
         self.registers[0xF] = vf as u8;
         self.program_counter + 2
+    }
+
+    /// Skips the next instruction if Vx is not pressed (0xExA1)
+    fn sknp_v(&mut self, instruction: u16, keyboard: &Keyboard) -> usize {
+        let vx = instruction >> 8 & 0xF;
+
+        if keyboard.pressed[self.registers[vx as usize] as usize] {
+            self.program_counter + 2
+        } else {
+            self.program_counter + 4
+        }
     }
 
     /// Adds Vx to Vi (0xFx1E)
@@ -574,6 +589,32 @@ mod tests {
         assert_eq!(display.pixels[0x3][0x5], false);
 
         assert_eq!(emulator.program_counter, 0x202);
+    }
+
+    #[test]
+    fn test_sknp_v_pressed() {
+        let mut emulator = Emulator::new(&[0xE0, 0xA1]);
+        emulator.registers[0x0] = 0x5;
+        let mut display = Display::default();
+        let mut keyboard = Keyboard::default();
+        keyboard.pressed[0x5] = true;
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
+    }
+
+    #[test]
+    fn test_sknp_v_not_pressed() {
+        let mut emulator = Emulator::new(&[0xE0, 0xA1]);
+        emulator.registers[0x0] = 0x5;
+        let mut display = Display::default();
+        let mut keyboard = Keyboard::default();
+        keyboard.pressed[0x5] = false;
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x204);
     }
 
     #[test]

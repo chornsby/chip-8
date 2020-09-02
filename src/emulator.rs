@@ -62,6 +62,7 @@ impl Emulator {
                 0x2 => self.and_v_v(instruction),
                 0x3 => self.xor_v_v(instruction),
                 0x4 => self.add_v_v(instruction),
+                0x5 => self.sub_v_v(instruction),
                 0x6 => self.shr_v_v(instruction),
                 0xE => self.shl_v_v(instruction),
                 _ => panic!("Unknown instruction 0x{:X}", instruction),
@@ -196,6 +197,19 @@ impl Emulator {
             self.registers[vx as usize].overflowing_add(self.registers[vy as usize]);
 
         self.registers[0xF] = carry as u8;
+        self.registers[vx as usize] = value;
+        self.program_counter + 2
+    }
+
+    /// Subtracts Vy from Vx with carry (0x8xy5)
+    fn sub_v_v(&mut self, instruction: u16) -> usize {
+        let vx = instruction >> 8 & 0xF;
+        let vy = instruction >> 4 & 0xF;
+
+        let (value, carry) =
+            self.registers[vx as usize].overflowing_sub(self.registers[vy as usize]);
+
+        self.registers[0xF] = !carry as u8;
         self.registers[vx as usize] = value;
         self.program_counter + 2
     }
@@ -523,6 +537,27 @@ mod tests {
         assert_eq!(emulator.program_counter, 0x204);
         assert_eq!(emulator.registers[0x9], 0x68);
         assert_eq!(emulator.registers[0xF], 1);
+    }
+
+    #[test]
+    fn test_sub_v_v() {
+        let mut emulator = Emulator::new(&[0x89, 0xA5, 0x89, 0xA5]);
+        emulator.registers[0x9] = 0x78;
+        emulator.registers[0xA] = 0x78;
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
+        assert_eq!(emulator.registers[0x9], 0x0);
+        assert_eq!(emulator.registers[0xF], 1);
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x204);
+        assert_eq!(emulator.registers[0x9], 0x88);
+        assert_eq!(emulator.registers[0xF], 0);
     }
 
     #[test]

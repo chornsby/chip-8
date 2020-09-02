@@ -46,8 +46,6 @@ impl Emulator {
             (byte_1 as u16) << 8 | byte_2 as u16
         };
 
-        println!("{}: {:#04X}", self.program_counter, instruction);
-
         self.program_counter = match instruction {
             0x00E0 => self.cls(display),
             0x00EE => self.ret(),

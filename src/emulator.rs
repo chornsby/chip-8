@@ -74,6 +74,7 @@ impl Emulator {
                 _ => panic!("Unknown instruction 0x{:X}", instruction),
             },
             0xF000..=0xFFFF => match instruction & 0xFF {
+                0x07 => self.ld_v_dt(instruction),
                 0x1E => self.add_i_v(instruction),
                 0x55 => self.ld_i_v(instruction),
                 0x65 => self.ld_v_i(instruction),
@@ -275,6 +276,14 @@ impl Emulator {
         } else {
             self.program_counter + 4
         }
+    }
+
+    /// Loads the delay timer into Vx (0xFx07)
+    fn ld_v_dt(&mut self, instruction: u16) -> usize {
+        let vx = instruction >> 8 & 0xF;
+
+        self.registers[vx as usize] = self.delay_timer;
+        self.program_counter + 2
     }
 
     /// Adds Vx to Vi (0xFx1E)
@@ -626,6 +635,19 @@ mod tests {
         emulator.tick(&mut display, &keyboard);
 
         assert_eq!(emulator.program_counter, 0x204);
+    }
+
+    #[test]
+    fn test_ld_v_dt() {
+        let mut emulator = Emulator::new(&[0xF1, 0x07]);
+        emulator.delay_timer = 0x55;
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
+        assert_eq!(emulator.registers[0x1], 0x55);
     }
 
     #[test]

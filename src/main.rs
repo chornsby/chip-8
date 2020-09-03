@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 mod display;
 mod emulator;
 mod keyboard;
+mod memory;
 
 fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;

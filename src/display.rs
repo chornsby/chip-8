@@ -1,7 +1,7 @@
 pub const HEIGHT: usize = 32;
 pub const WIDTH: usize = 64;
 
-/// Stores the current lit state of every pixel on the Chip-8 display
+/// Stores the current active state of every pixel on the Chip-8 display
 pub struct Display {
     pixels: [[bool; WIDTH]; HEIGHT],
 }

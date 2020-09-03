@@ -255,29 +255,14 @@ impl Emulator {
         let vy = instruction >> 4 & 0xF;
         let n = (instruction & 0xF) as usize;
 
+        let offset = self.i as usize;
         let x = self.registers[vx as usize] as usize;
         let y = self.registers[vy as usize] as usize;
-        let mut vf = false;
 
-        for j in 0..n {
-            let byte = self.memory[self.i as usize + j].reverse_bits();
+        let sprite = &self.memory[offset..offset + n];
+        let erased = display.xor_sprite(x, y, sprite);
 
-            for i in 0..8 {
-                let x = (x + i) % 64;
-                let y = (y + j) % 32;
-                let bit = (byte >> i) % 2 == 1;
-
-                let before = display.pixels[y][x];
-                display.pixels[y][x] ^= bit;
-                let after = display.pixels[y][x];
-
-                if before && !after {
-                    vf = true;
-                }
-            }
-        }
-
-        self.registers[0xF] = vf as u8;
+        self.registers[0xF] = erased as u8;
         self.program_counter + 2
     }
 

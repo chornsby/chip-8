@@ -3,7 +3,7 @@ pub const WIDTH: usize = 64;
 
 /// Stores the current active state of every pixel on the Chip-8 display
 pub struct Display {
-    pixels: [[bool; WIDTH]; HEIGHT],
+    pixels: [bool; WIDTH * HEIGHT],
 }
 
 impl Default for Display {
@@ -15,10 +15,10 @@ impl Default for Display {
 impl Display {
     /// Creates a new display with some pixels already active
     pub fn new(active: &[(usize, usize)]) -> Self {
-        let mut pixels = [[false; WIDTH]; HEIGHT];
+        let mut pixels = [false; WIDTH * HEIGHT];
 
         for (x, y) in active {
-            pixels[*y][*x] = true;
+            pixels[x + y * WIDTH] = true;
         }
 
         Self { pixels }
@@ -26,12 +26,12 @@ impl Display {
 
     /// Resets the display to a blank screen
     pub fn clear(&mut self) {
-        self.pixels = [[false; WIDTH]; HEIGHT];
+        self.pixels = [false; WIDTH * HEIGHT];
     }
 
     /// Returns whether the current pixel is active
     pub fn get_pixel(&self, x: usize, y: usize) -> bool {
-        self.pixels[y][x]
+        self.pixels[x + y * WIDTH]
     }
 
     /// Flips bits to draw a sprite on the screen
@@ -56,8 +56,8 @@ impl Display {
                 let y = (y + j) % HEIGHT;
                 let bit = (sprite >> i) % 2 == 1;
 
-                let before = self.pixels[y][x];
-                self.pixels[y][x] ^= bit;
+                let before = self.pixels[x + y * WIDTH];
+                self.pixels[x + y * WIDTH] ^= bit;
 
                 if before && bit {
                     erased = true;

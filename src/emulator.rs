@@ -330,7 +330,7 @@ mod tests {
         emulator.tick(&mut display, &keyboard);
 
         assert_eq!(emulator.program_counter, 0x202);
-        assert_eq!(display.pixels[0][0], false);
+        assert_eq!(display.get_pixel(0, 0), false);
     }
 
     #[test]
@@ -610,23 +610,23 @@ mod tests {
 
         emulator.tick(&mut display, &keyboard);
 
-        assert_eq!(display.pixels[0x2][0x3E], true);
-        assert_eq!(display.pixels[0x2][0x3F], true);
-        assert_eq!(display.pixels[0x2][0x0], true);
-        assert_eq!(display.pixels[0x2][0x1], true);
-        assert_eq!(display.pixels[0x2][0x2], false);
-        assert_eq!(display.pixels[0x2][0x3], false);
-        assert_eq!(display.pixels[0x2][0x4], false);
-        assert_eq!(display.pixels[0x2][0x5], false);
+        assert_eq!(display.get_pixel(0x3E, 0x2), true);
+        assert_eq!(display.get_pixel(0x3F, 0x2), true);
+        assert_eq!(display.get_pixel(0x0, 0x2), true);
+        assert_eq!(display.get_pixel(0x1, 0x2), true);
+        assert_eq!(display.get_pixel(0x2, 0x2), false);
+        assert_eq!(display.get_pixel(0x3, 0x2), false);
+        assert_eq!(display.get_pixel(0x4, 0x2), false);
+        assert_eq!(display.get_pixel(0x5, 0x2), false);
 
-        assert_eq!(display.pixels[0x3][0x3E], true);
-        assert_eq!(display.pixels[0x3][0x3F], true);
-        assert_eq!(display.pixels[0x3][0x0], false);
-        assert_eq!(display.pixels[0x3][0x1], false);
-        assert_eq!(display.pixels[0x3][0x2], true);
-        assert_eq!(display.pixels[0x3][0x3], true);
-        assert_eq!(display.pixels[0x3][0x4], false);
-        assert_eq!(display.pixels[0x3][0x5], false);
+        assert_eq!(display.get_pixel(0x3E, 0x3), true);
+        assert_eq!(display.get_pixel(0x3F, 0x3), true);
+        assert_eq!(display.get_pixel(0x0, 0x3), false);
+        assert_eq!(display.get_pixel(0x1, 0x3), false);
+        assert_eq!(display.get_pixel(0x2, 0x3), true);
+        assert_eq!(display.get_pixel(0x3, 0x3), true);
+        assert_eq!(display.get_pixel(0x4, 0x3), false);
+        assert_eq!(display.get_pixel(0x5, 0x3), false);
 
         assert_eq!(emulator.program_counter, 0x202);
     }

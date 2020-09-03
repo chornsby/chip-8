@@ -52,9 +52,10 @@ fn main() -> Result<(), String> {
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
         canvas.set_draw_color(Color::WHITE);
-        for (y, &row) in display.pixels.iter().enumerate() {
-            for (x, &is_lit) in row.iter().enumerate() {
-                if is_lit {
+
+        for x in 0..display::WIDTH {
+            for y in 0..display::HEIGHT {
+                if display.get_pixel(x, y) {
                     canvas.fill_rect(Rect::new(x as i32 * 10, y as i32 * 10, 10, 10))?;
                 }
             }

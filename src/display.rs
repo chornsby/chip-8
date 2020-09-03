@@ -1,5 +1,5 @@
-const HEIGHT: usize = 32;
-const WIDTH: usize = 64;
+pub const HEIGHT: usize = 32;
+pub const WIDTH: usize = 64;
 
 /// Stores the current lit state of every pixel on the Chip-8 display
 pub struct Display {
@@ -18,6 +18,11 @@ impl Display {
     /// Resets the display to a blank screen
     pub fn clear(&mut self) {
         self.pixels = [[false; WIDTH]; HEIGHT];
+    }
+
+    /// Returns whether the current pixel is lit
+    pub fn get_pixel(&self, x: usize, y: usize) -> bool {
+        self.pixels[y][x]
     }
 
     /// Flips bits to draw a sprite on the screen

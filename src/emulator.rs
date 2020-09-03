@@ -3,7 +3,110 @@ use crate::keyboard::Keyboard;
 use rand::Rng;
 
 const MEMORY_SIZE: usize = 0x1000;
+const DIGITS_OFFSET: usize = 0x000;
 const PROGRAM_OFFSET: usize = 0x200;
+
+const DIGIT_SPRITE_LENGTH: usize = 5;
+
+#[rustfmt::skip]
+const DIGITS: [u8; 16 * DIGIT_SPRITE_LENGTH] = [
+    // 0
+    0b11110000, 
+    0b10010000, 
+    0b10010000, 
+    0b10010000, 
+    0b11110000,
+    // 1
+    0b00100000,
+    0b01100000,
+    0b00100000,
+    0b00100000,
+    0b01110000,
+    // 2
+    0b11110000,
+    0b00010000,
+    0b11110000,
+    0b10000000,
+    0b11110000,
+    // 3
+    0b11110000,
+    0b00010000,
+    0b11110000,
+    0b00010000,
+    0b11110000,
+    // 4
+    0b10010000,
+    0b10010000,
+    0b11110000,
+    0b00010000,
+    0b00010000,
+    // 5
+    0b11110000,
+    0b10000000,
+    0b11110000,
+    0b00010000,
+    0b11110000,
+    // 6
+    0b11110000,
+    0b10000000,
+    0b11110000,
+    0b10010000,
+    0b11110000,
+    // 7
+    0b11110000,
+    0b00010000,
+    0b00100000,
+    0b01000000,
+    0b01000000,
+    // 8
+    0b11110000,
+    0b10010000,
+    0b11110000,
+    0b10010000,
+    0b11110000,
+    // 9
+    0b11110000,
+    0b10010000,
+    0b11110000,
+    0b00010000,
+    0b11110000,
+    // A
+    0b11110000,
+    0b10010000,
+    0b11110000,
+    0b10010000,
+    0b10010000,
+    // B
+    0b11100000,
+    0b10010000,
+    0b11100000,
+    0b10010000,
+    0b11100000,
+    // C
+    0b11110000,
+    0b10000000,
+    0b10000000,
+    0b10000000,
+    0b11110000,
+    // D
+    0b11100000,
+    0b10010000,
+    0b10010000,
+    0b10010000,
+    0b11100000,
+    // E
+    0b11110000,
+    0b10000000,
+    0b11110000,
+    0b10000000,
+    0b11110000,
+    // F
+    0b11110000,
+    0b10000000,
+    0b11110000,
+    0b10000000,
+    0b10000000,
+];
 
 pub struct Emulator {
     memory: [u8; MEMORY_SIZE],
@@ -18,6 +121,10 @@ pub struct Emulator {
 impl Emulator {
     pub fn new(rom: &[u8]) -> Self {
         let mut memory = [0; MEMORY_SIZE];
+
+        for (index, &byte) in DIGITS.iter().enumerate() {
+            memory[DIGITS_OFFSET + index] = byte;
+        }
 
         for (index, &byte) in rom.iter().enumerate() {
             memory[PROGRAM_OFFSET + index] = byte;
@@ -77,6 +184,7 @@ impl Emulator {
             0xF000..=0xFFFF => match instruction & 0xFF {
                 0x07 => self.ld_v_dt(instruction),
                 0x1E => self.add_i_v(instruction),
+                0x29 => self.ld_f_v(instruction),
                 0x55 => self.ld_i_v(instruction),
                 0x65 => self.ld_v_i(instruction),
                 _ => panic!("Unknown instruction 0x{:X}", instruction),
@@ -290,6 +398,15 @@ impl Emulator {
         let vx = instruction >> 8 & 0xF;
 
         self.i = self.i.wrapping_add(self.registers[vx as usize] as u16);
+        self.program_counter + 2
+    }
+
+    /// Sets Vi to the location of sprite Vx (0xFx29)
+    fn ld_f_v(&mut self, instruction: u16) -> usize {
+        let vx = instruction >> 8 & 0xF;
+        let value = self.registers[vx as usize] as u16;
+
+        self.i = DIGITS_OFFSET as u16 + value * DIGIT_SPRITE_LENGTH as u16;
         self.program_counter + 2
     }
 
@@ -682,6 +799,19 @@ mod tests {
         assert_eq!(emulator.i, 0x134);
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0xF], 0);
+    }
+
+    #[test]
+    fn test_ld_f_v() {
+        let mut emulator = Emulator::new(&[0xF6, 0x29]);
+        emulator.registers[0x6] = 0xA;
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.i, 0xA * 5);
+        assert_eq!(emulator.program_counter, 0x202);
     }
 
     #[test]

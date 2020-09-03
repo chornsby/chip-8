@@ -3,24 +3,33 @@ pub const WIDTH: usize = 64;
 
 /// Stores the current lit state of every pixel on the Chip-8 display
 pub struct Display {
-    pub pixels: [[bool; WIDTH]; HEIGHT],
+    pixels: [[bool; WIDTH]; HEIGHT],
 }
 
 impl Default for Display {
     fn default() -> Self {
-        Self {
-            pixels: [[false; WIDTH]; HEIGHT],
-        }
+        Self::new(&[])
     }
 }
 
 impl Display {
+    /// Creates a new display with some pixels already active
+    pub fn new(active: &[(usize, usize)]) -> Self {
+        let mut pixels = [[false; WIDTH]; HEIGHT];
+
+        for (x, y) in active {
+            pixels[*y][*x] = true;
+        }
+
+        Self { pixels }
+    }
+
     /// Resets the display to a blank screen
     pub fn clear(&mut self) {
         self.pixels = [[false; WIDTH]; HEIGHT];
     }
 
-    /// Returns whether the current pixel is lit
+    /// Returns whether the current pixel is active
     pub fn get_pixel(&self, x: usize, y: usize) -> bool {
         self.pixels[y][x]
     }

@@ -323,8 +323,7 @@ mod tests {
     #[test]
     fn test_cls() {
         let mut emulator = Emulator::new(&[0x00, 0xE0]);
-        let mut display = Display::default();
-        display.pixels[0][0] = true;
+        let mut display = Display::new(&[(0, 0)]);
         let keyboard = Keyboard::default();
 
         emulator.tick(&mut display, &keyboard);

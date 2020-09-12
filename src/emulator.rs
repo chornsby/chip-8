@@ -56,6 +56,7 @@ impl Emulator {
                 0xE => self.shl_v_v(instruction),
                 _ => panic!("Unknown instruction 0x{:X}", instruction),
             },
+            0x9000..=0x9FFF => self.sne_v_v(instruction),
             0xA000..=0xAFFF => self.ld_i(instruction),
             0xC000..=0xCFFF => self.rnd_v(instruction),
             0xD000..=0xDFFF => self.drw(instruction, display),
@@ -221,6 +222,18 @@ impl Emulator {
         self.registers[0xF] = (0b10000000 <= self.registers[vx as usize]) as u8;
         self.registers[vx as usize] <<= 1;
         self.program_counter + 2
+    }
+
+    /// Skips the next instruction if Vx != Vy (0x9xy0)
+    fn sne_v_v(&self, instruction: u16) -> usize {
+        let vx = instruction >> 8 & 0xF;
+        let vy = instruction >> 4 & 0xF;
+
+        if self.registers[vx as usize] == self.registers[vy as usize] {
+            self.program_counter + 2
+        } else {
+            self.program_counter + 4
+        }
     }
 
     /// Loads nnn to Vi (0xAnnn)
@@ -595,6 +608,32 @@ mod tests {
         assert_eq!(emulator.program_counter, 0x204);
         assert_eq!(emulator.registers[0x9], 0b10000000);
         assert_eq!(emulator.registers[0xF], 0);
+    }
+
+    #[test]
+    fn test_sne_v_v_not_equal() {
+        let mut emulator = Emulator::new(&[0x9A, 0xB0]);
+        emulator.registers[0xA] = 0xC;
+        emulator.registers[0xB] = 0xD;
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x204);
+    }
+
+    #[test]
+    fn test_sne_v_v_equal() {
+        let mut emulator = Emulator::new(&[0x9A, 0xB0]);
+        emulator.registers[0xA] = 0xC;
+        emulator.registers[0xB] = 0xC;
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
     }
 
     #[test]

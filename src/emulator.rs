@@ -67,6 +67,9 @@ impl Emulator {
             },
             0xF000..=0xFFFF => match instruction & 0xFF {
                 0x07 => self.ld_v_dt(instruction),
+                0x0A => self.ld_v_k(instruction, keyboard),
+                0x15 => self.ld_dt_v(instruction),
+                0x18 => self.ld_st_v(instruction),
                 0x1E => self.add_i_v(instruction),
                 0x29 => self.ld_f_v(instruction),
                 0x55 => self.ld_i_v(instruction),
@@ -297,6 +300,36 @@ impl Emulator {
         let vx = instruction >> 8 & 0xF;
 
         self.registers[vx as usize] = self.delay_timer;
+        self.program_counter + 2
+    }
+
+    /// Stops execution until a key press then stores it in Vx (0xFx0A)
+    fn ld_v_k(&mut self, instruction: u16, keyboard: &Keyboard) -> usize {
+        let vx = instruction >> 8 & 0xF;
+
+        let key_pressed = Keyboard::keys().find(|key| keyboard.is_pressed(key));
+
+        if let Some(key) = key_pressed {
+            self.registers[vx as usize] = key as u8;
+            self.program_counter + 2
+        } else {
+            self.program_counter
+        }
+    }
+
+    /// Loads Vx into the delay timer (0xFx15)
+    fn ld_dt_v(&mut self, instruction: u16) -> usize {
+        let vx = instruction >> 8 & 0xF;
+
+        self.delay_timer = self.registers[vx as usize];
+        self.program_counter + 2
+    }
+
+    /// Loads Vx into the sound timer (0xFx18)
+    fn ld_st_v(&mut self, instruction: u16) -> usize {
+        let vx = instruction >> 8 & 0xF;
+
+        self.sound_timer = self.registers[vx as usize];
         self.program_counter + 2
     }
 
@@ -745,6 +778,51 @@ mod tests {
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0x1], 0x55);
+    }
+
+    #[test]
+    fn test_ld_v_k() {
+        let mut emulator = Emulator::new(&[0xF2, 0x0A]);
+        let mut display = Display::default();
+        let mut keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x200);
+        assert_eq!(emulator.registers[0x2], 0x0);
+
+        keyboard.press(&Key::Num2);
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
+        assert_eq!(emulator.registers[0x2], 0x2);
+    }
+
+    #[test]
+    fn test_ld_dt_v() {
+        let mut emulator = Emulator::new(&[0xF3, 0x15]);
+        emulator.registers[0x3] = 3;
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
+        assert_eq!(emulator.delay_timer, 0x3);
+    }
+
+    #[test]
+    fn test_ld_st_v() {
+        let mut emulator = Emulator::new(&[0xF4, 0x18]);
+        emulator.registers[0x4] = 4;
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
+        assert_eq!(emulator.sound_timer, 0x4);
     }
 
     #[test]

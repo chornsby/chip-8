@@ -261,7 +261,7 @@ impl Emulator {
     fn skp_v(&self, instruction: u16, keyboard: &Keyboard) -> usize {
         let vx = instruction >> 8 & 0xF;
 
-        if keyboard.pressed[self.registers[vx as usize] as usize] {
+        if keyboard.is_pressed(&self.registers[vx as usize].into()) {
             self.program_counter + 4
         } else {
             self.program_counter + 2
@@ -272,7 +272,7 @@ impl Emulator {
     fn sknp_v(&self, instruction: u16, keyboard: &Keyboard) -> usize {
         let vx = instruction >> 8 & 0xF;
 
-        if keyboard.pressed[self.registers[vx as usize] as usize] {
+        if keyboard.is_pressed(&self.registers[vx as usize].into()) {
             self.program_counter + 2
         } else {
             self.program_counter + 4
@@ -331,6 +331,7 @@ impl Emulator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::keyboard::Key;
 
     #[test]
     fn test_cls() {
@@ -648,7 +649,7 @@ mod tests {
         emulator.registers[0x0] = 0x5;
         let mut display = Display::default();
         let mut keyboard = Keyboard::default();
-        keyboard.pressed[0x5] = true;
+        keyboard.press(&Key::Num5);
 
         emulator.tick(&mut display, &keyboard);
 
@@ -661,7 +662,7 @@ mod tests {
         emulator.registers[0x0] = 0x5;
         let mut display = Display::default();
         let mut keyboard = Keyboard::default();
-        keyboard.pressed[0x5] = false;
+        keyboard.release(&Key::Num5);
 
         emulator.tick(&mut display, &keyboard);
 
@@ -674,7 +675,7 @@ mod tests {
         emulator.registers[0x0] = 0x5;
         let mut display = Display::default();
         let mut keyboard = Keyboard::default();
-        keyboard.pressed[0x5] = true;
+        keyboard.press(&Key::Num5);
 
         emulator.tick(&mut display, &keyboard);
 
@@ -687,7 +688,7 @@ mod tests {
         emulator.registers[0x0] = 0x5;
         let mut display = Display::default();
         let mut keyboard = Keyboard::default();
-        keyboard.pressed[0x5] = false;
+        keyboard.release(&Key::Num5);
 
         emulator.tick(&mut display, &keyboard);
 

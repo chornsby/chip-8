@@ -1,12 +1,48 @@
 use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
+use std::convert::{TryFrom, TryInto};
 use std::time::{Duration, Instant};
 
 mod display;
 mod emulator;
 mod keyboard;
 mod memory;
+
+impl TryFrom<Keycode> for keyboard::Key {
+    type Error = ();
+
+    /// Maps between modern keyboard keys and Chip-8 hex keys
+    ///
+    /// ```
+    /// 1 2 3 4     1 2 3 C
+    /// q w e r --> 4 5 6 D
+    /// a s d f --> 7 8 9 E
+    /// z x c v     A 0 B F
+    /// ```
+    fn try_from(value: Keycode) -> Result<Self, Self::Error> {
+        match value {
+            Keycode::Num1 => Ok(keyboard::Key::Num1),
+            Keycode::Num2 => Ok(keyboard::Key::Num2),
+            Keycode::Num3 => Ok(keyboard::Key::Num3),
+            Keycode::Num4 => Ok(keyboard::Key::C),
+            Keycode::Q => Ok(keyboard::Key::Num4),
+            Keycode::W => Ok(keyboard::Key::Num5),
+            Keycode::E => Ok(keyboard::Key::Num6),
+            Keycode::R => Ok(keyboard::Key::D),
+            Keycode::A => Ok(keyboard::Key::Num7),
+            Keycode::S => Ok(keyboard::Key::Num8),
+            Keycode::D => Ok(keyboard::Key::Num9),
+            Keycode::F => Ok(keyboard::Key::E),
+            Keycode::Z => Ok(keyboard::Key::A),
+            Keycode::X => Ok(keyboard::Key::Num0),
+            Keycode::C => Ok(keyboard::Key::B),
+            Keycode::V => Ok(keyboard::Key::F),
+            _ => Err(()),
+        }
+    }
+}
 
 fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
@@ -28,7 +64,7 @@ fn main() -> Result<(), String> {
     let rom = std::fs::read("roms/BLINKY").expect("Unable to read rom");
     let mut emulator = emulator::Emulator::new(&rom);
     let mut display = display::Display::default();
-    let keyboard = keyboard::Keyboard::default();
+    let mut keyboard = keyboard::Keyboard::default();
 
     let target_frame_time = Duration::from_secs(1) / 60;
 
@@ -38,6 +74,20 @@ fn main() -> Result<(), String> {
         // Input
         for event in event_pump.poll_iter() {
             match event {
+                Event::KeyDown { keycode, .. } => {
+                    if let Some(keycode) = keycode {
+                        if let Ok(key) = keycode.try_into() {
+                            keyboard.press(&key);
+                        }
+                    }
+                }
+                Event::KeyUp { keycode, .. } => {
+                    if let Some(keycode) = keycode {
+                        if let Ok(key) = keycode.try_into() {
+                            keyboard.release(&key);
+                        }
+                    }
+                }
                 Event::Quit { .. } => break 'is_running,
                 _ => {}
             }

@@ -43,6 +43,10 @@ impl Emulator {
             0x2000..=0x2FFF => self.call(instruction),
             0x3000..=0x3FFF => self.se_v(instruction),
             0x4000..=0x4FFF => self.sne_v(instruction),
+            0x5000..=0x5FFF => match instruction & 0xF {
+                0x0 => self.se_v_v(instruction),
+                _ => panic!("Unknown instruction 0x{:X}", instruction),
+            },
             0x6000..=0x6FFF => self.ld_v(instruction),
             0x7000..=0x7FFF => self.add_v(instruction),
             0x8000..=0x8FFF => match instruction & 0xF {
@@ -107,7 +111,7 @@ impl Emulator {
     }
 
     /// Skips an instruction if Vx == kk (0x3xkk)
-    fn se_v(&mut self, instruction: u16) -> usize {
+    fn se_v(&self, instruction: u16) -> usize {
         let vx = instruction >> 8 & 0xF;
         let byte = (instruction & 0xFF) as u8;
 
@@ -119,7 +123,7 @@ impl Emulator {
     }
 
     /// Skips an instruction if Vx != kk (0x4xkk)
-    fn sne_v(&mut self, instruction: u16) -> usize {
+    fn sne_v(&self, instruction: u16) -> usize {
         let vx = instruction >> 8 & 0xF;
         let byte = (instruction & 0xFF) as u8;
 
@@ -127,6 +131,18 @@ impl Emulator {
             self.program_counter + 2
         } else {
             self.program_counter + 4
+        }
+    }
+
+    /// Skips an instruction if Vx == Vy (0x5xy0)
+    fn se_v_v(&self, instruction: u16) -> usize {
+        let vx = instruction >> 8 & 0xF;
+        let vy = instruction >> 4 & 0xF;
+
+        if self.registers[vx as usize] == self.registers[vy as usize] {
+            self.program_counter + 4
+        } else {
+            self.program_counter + 2
         }
     }
 
@@ -489,6 +505,32 @@ mod tests {
         emulator.tick(&mut display, &keyboard);
 
         assert_eq!(emulator.program_counter, 0x204);
+    }
+
+    #[test]
+    fn test_se_v_v_equal() {
+        let mut emulator = Emulator::new(&[0x56, 0x70]);
+        emulator.registers[0x6] = 0x78;
+        emulator.registers[0x7] = 0x78;
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x204);
+    }
+
+    #[test]
+    fn test_se_v_v_not_equal() {
+        let mut emulator = Emulator::new(&[0x56, 0x70]);
+        emulator.registers[0x6] = 0x78;
+        emulator.registers[0x7] = 0x89;
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
     }
 
     #[test]

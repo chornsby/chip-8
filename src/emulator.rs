@@ -72,6 +72,7 @@ impl Emulator {
                 0x18 => self.ld_st_v(instruction),
                 0x1E => self.add_i_v(instruction),
                 0x29 => self.ld_f_v(instruction),
+                0x33 => self.ld_b_v(instruction),
                 0x55 => self.ld_i_v(instruction),
                 0x65 => self.ld_v_i(instruction),
                 _ => panic!("Unknown instruction 0x{:X}", instruction),
@@ -347,6 +348,20 @@ impl Emulator {
         let value = self.registers[vx as usize];
 
         self.i = Memory::calculate_digit_offset(value) as u16;
+        self.program_counter + 2
+    }
+
+    /// Store BCD representation of Vx in memory (0xFx33)
+    fn ld_b_v(&mut self, instruction: u16) -> usize {
+        let vx = instruction >> 8 & 0xF;
+        let x = self.registers[vx as usize];
+
+        for index in 0..3 {
+            let offset = (self.i + index) as usize;
+            let digit = (x / 10u8.pow(2 - index as u32)) % 10;
+            self.memory.set_byte(offset, digit);
+        }
+
         self.program_counter + 2
     }
 
@@ -850,6 +865,22 @@ mod tests {
         emulator.tick(&mut display, &keyboard);
 
         assert_eq!(emulator.i, 0xA * 5);
+        assert_eq!(emulator.program_counter, 0x202);
+    }
+
+    #[test]
+    fn test_ld_b_v() {
+        let mut emulator = Emulator::new(&[0xF7, 0x33]);
+        emulator.i = 0x400;
+        emulator.registers[0x7] = 0x7B;
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.memory.get_byte(0x400), 0x1);
+        assert_eq!(emulator.memory.get_byte(0x401), 0x2);
+        assert_eq!(emulator.memory.get_byte(0x402), 0x3);
         assert_eq!(emulator.program_counter, 0x202);
     }
 

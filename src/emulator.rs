@@ -54,11 +54,13 @@ impl Emulator {
                 0x4 => self.add_v_v(instruction),
                 0x5 => self.sub_v_v(instruction),
                 0x6 => self.shr_v_v(instruction),
+                0x7 => self.subn_v_v(instruction),
                 0xE => self.shl_v_v(instruction),
                 _ => panic!("Unknown instruction 0x{:X}", instruction),
             },
             0x9000..=0x9FFF if instruction & 0xF == 0x0 => self.sne_v_v(instruction),
             0xA000..=0xAFFF => self.ld_i(instruction),
+            0xB000..=0xBFFF => self.jp_v(instruction),
             0xC000..=0xCFFF => self.rnd_v(instruction),
             0xD000..=0xDFFF => self.drw(instruction, display),
             0xE000..=0xEFFF => match instruction & 0xFF {
@@ -232,6 +234,19 @@ impl Emulator {
         self.program_counter + 2
     }
 
+    /// Subtracts Vy from Vx and stores result in Vx with carry (0x8xy7)
+    fn subn_v_v(&mut self, instruction: u16) -> usize {
+        let vx = instruction >> 8 & 0xF;
+        let vy = instruction >> 4 & 0xF;
+
+        let (value, carry) =
+            self.registers[vy as usize].overflowing_sub(self.registers[vx as usize]);
+
+        self.registers[0xF] = !carry as u8;
+        self.registers[vx as usize] = value;
+        self.program_counter + 2
+    }
+
     /// Shifts Vx to the left with carry (0x8xyE)
     fn shl_v_v(&mut self, instruction: u16) -> usize {
         let vx = instruction >> 8 & 0xF;
@@ -259,6 +274,13 @@ impl Emulator {
 
         self.i = addr;
         self.program_counter + 2
+    }
+
+    /// Jumps program counter to nnn + V0 (0xBnnn)
+    fn jp_v(&self, instruction: u16) -> usize {
+        let addr = instruction & 0xFFF;
+
+        addr as usize + self.registers[0x0] as usize
     }
 
     /// Randomly generates a random number to store in Vx (0xCxkk)
@@ -678,6 +700,27 @@ mod tests {
     }
 
     #[test]
+    fn test_subn_v_v() {
+        let mut emulator = Emulator::new(&[0x89, 0xA7, 0x89, 0xA7]);
+        emulator.registers[0x9] = 0x78;
+        emulator.registers[0xA] = 0x78;
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x202);
+        assert_eq!(emulator.registers[0x9], 0x0);
+        assert_eq!(emulator.registers[0xF], 1);
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0x204);
+        assert_eq!(emulator.registers[0x9], 0x78);
+        assert_eq!(emulator.registers[0xF], 1);
+    }
+
+    #[test]
     fn test_shl_v_v() {
         let mut emulator = Emulator::new(&[0x89, 0xAE, 0x89, 0xAE]);
         emulator.registers[0x9] = 0b10100000;
@@ -733,6 +776,19 @@ mod tests {
 
         assert_eq!(emulator.i, 0xBCD);
         assert_eq!(emulator.program_counter, 0x202);
+    }
+
+    #[test]
+    fn test_jp_v() {
+        let mut emulator = Emulator::new(&[0xBC, 0xDE]);
+        emulator.registers[0x0] = 0x1;
+        let mut display = Display::default();
+        let keyboard = Keyboard::default();
+
+        emulator.tick(&mut display, &keyboard);
+
+        assert_eq!(emulator.program_counter, 0xCDF);
+        assert_eq!(emulator.stack, vec![]);
     }
 
     #[test]

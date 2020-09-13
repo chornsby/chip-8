@@ -43,10 +43,7 @@ impl Emulator {
             0x2000..=0x2FFF => self.call(instruction),
             0x3000..=0x3FFF => self.se_v(instruction),
             0x4000..=0x4FFF => self.sne_v(instruction),
-            0x5000..=0x5FFF => match instruction & 0xF {
-                0x0 => self.se_v_v(instruction),
-                _ => panic!("Unknown instruction 0x{:X}", instruction),
-            },
+            0x5000..=0x5FFF if instruction & 0xF == 0x0 => self.se_v_v(instruction),
             0x6000..=0x6FFF => self.ld_v(instruction),
             0x7000..=0x7FFF => self.add_v(instruction),
             0x8000..=0x8FFF => match instruction & 0xF {
@@ -60,7 +57,7 @@ impl Emulator {
                 0xE => self.shl_v_v(instruction),
                 _ => panic!("Unknown instruction 0x{:X}", instruction),
             },
-            0x9000..=0x9FFF => self.sne_v_v(instruction),
+            0x9000..=0x9FFF if instruction & 0xF == 0x0 => self.sne_v_v(instruction),
             0xA000..=0xAFFF => self.ld_i(instruction),
             0xC000..=0xCFFF => self.rnd_v(instruction),
             0xD000..=0xDFFF => self.drw(instruction, display),

@@ -11,6 +11,8 @@ mod instruction;
 mod keyboard;
 mod memory;
 
+const SCALE: usize = 20;
+
 impl TryFrom<Keycode> for keyboard::Key {
     type Error = ();
 
@@ -50,7 +52,11 @@ fn main() -> Result<(), String> {
     let video_subsystem = sdl_context.video()?;
 
     let window = video_subsystem
-        .window("Chip-8", 640, 320)
+        .window(
+            "Chip-8",
+            (display::WIDTH * SCALE) as u32,
+            (display::HEIGHT * SCALE) as u32,
+        )
         .position_centered()
         .build()
         .expect("Could not create a window");
@@ -108,7 +114,12 @@ fn main() -> Result<(), String> {
         for x in 0..display::WIDTH {
             for y in 0..display::HEIGHT {
                 if display.get_pixel(x, y) {
-                    canvas.fill_rect(Rect::new(x as i32 * 10, y as i32 * 10, 10, 10))?;
+                    canvas.fill_rect(Rect::new(
+                        (x * SCALE) as i32,
+                        (y * SCALE) as i32,
+                        SCALE as u32,
+                        SCALE as u32,
+                    ))?;
                 }
             }
         }

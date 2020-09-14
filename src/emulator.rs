@@ -16,6 +16,7 @@ pub struct Emulator {
 }
 
 impl Emulator {
+    /// Loads a rom into memory and initialise the emulator
     pub fn new(rom: &[u8]) -> Self {
         let memory = Memory::new(rom);
 
@@ -30,11 +31,13 @@ impl Emulator {
         }
     }
 
+    /// Ticks down 1/60th of a second on the delay and sound timers
     pub fn decrement_timers(&mut self) {
         self.delay_timer = self.delay_timer.saturating_sub(1);
         self.sound_timer = self.sound_timer.saturating_sub(1);
     }
 
+    /// Evaluates one CPU instruction and updates the program counter
     pub fn tick(&mut self, display: &mut Display, keyboard: &Keyboard) -> Result<(), String> {
         let bytes = self.memory.get_instruction(self.program_counter);
         let instruction = Instruction::try_from(bytes)?;

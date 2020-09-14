@@ -1,7 +1,9 @@
 use crate::display::Display;
+use crate::instruction::Instruction;
 use crate::keyboard::Keyboard;
 use crate::memory::{Memory, PROGRAM_OFFSET};
 use rand::Rng;
+use std::convert::TryFrom;
 
 pub struct Emulator {
     memory: Memory,
@@ -33,55 +35,48 @@ impl Emulator {
         self.sound_timer = self.sound_timer.saturating_sub(1);
     }
 
-    pub fn tick(&mut self, display: &mut Display, keyboard: &Keyboard) {
-        let instruction = self.memory.get_instruction(self.program_counter);
+    pub fn tick(&mut self, display: &mut Display, keyboard: &Keyboard) -> Result<(), String> {
+        let bytes = self.memory.get_instruction(self.program_counter);
+        let instruction = Instruction::try_from(bytes)?;
 
         self.program_counter = match instruction {
-            0x00E0 => self.cls(display),
-            0x00EE => self.ret(),
-            0x1000..=0x1FFF => self.jp(instruction),
-            0x2000..=0x2FFF => self.call(instruction),
-            0x3000..=0x3FFF => self.se_v(instruction),
-            0x4000..=0x4FFF => self.sne_v(instruction),
-            0x5000..=0x5FFF if instruction & 0xF == 0x0 => self.se_v_v(instruction),
-            0x6000..=0x6FFF => self.ld_v(instruction),
-            0x7000..=0x7FFF => self.add_v(instruction),
-            0x8000..=0x8FFF => match instruction & 0xF {
-                0x0 => self.ld_v_v(instruction),
-                0x1 => self.or_v_v(instruction),
-                0x2 => self.and_v_v(instruction),
-                0x3 => self.xor_v_v(instruction),
-                0x4 => self.add_v_v(instruction),
-                0x5 => self.sub_v_v(instruction),
-                0x6 => self.shr_v_v(instruction),
-                0x7 => self.subn_v_v(instruction),
-                0xE => self.shl_v_v(instruction),
-                _ => panic!("Unknown instruction 0x{:X}", instruction),
-            },
-            0x9000..=0x9FFF if instruction & 0xF == 0x0 => self.sne_v_v(instruction),
-            0xA000..=0xAFFF => self.ld_i(instruction),
-            0xB000..=0xBFFF => self.jp_v(instruction),
-            0xC000..=0xCFFF => self.rnd_v(instruction),
-            0xD000..=0xDFFF => self.drw(instruction, display),
-            0xE000..=0xEFFF => match instruction & 0xFF {
-                0x9E => self.skp_v(instruction, keyboard),
-                0xA1 => self.sknp_v(instruction, keyboard),
-                _ => panic!("Unknown instruction 0x{:X}", instruction),
-            },
-            0xF000..=0xFFFF => match instruction & 0xFF {
-                0x07 => self.ld_v_dt(instruction),
-                0x0A => self.ld_v_k(instruction, keyboard),
-                0x15 => self.ld_dt_v(instruction),
-                0x18 => self.ld_st_v(instruction),
-                0x1E => self.add_i_v(instruction),
-                0x29 => self.ld_f_v(instruction),
-                0x33 => self.ld_b_v(instruction),
-                0x55 => self.ld_i_v(instruction),
-                0x65 => self.ld_v_i(instruction),
-                _ => panic!("Unknown instruction 0x{:X}", instruction),
-            },
-            _ => panic!("Unknown instruction 0x{:X}", instruction),
-        }
+            Instruction::Cls => self.cls(display),
+            Instruction::Ret => self.ret(),
+            Instruction::Jp { addr } => self.jp(addr),
+            Instruction::Call { addr } => self.call(addr),
+            Instruction::SeV { vx, byte } => self.se_v(vx, byte),
+            Instruction::SneV { vx, byte } => self.sne_v(vx, byte),
+            Instruction::SeVV { vx, vy } => self.se_v_v(vx, vy),
+            Instruction::LdV { vx, byte } => self.ld_v(vx, byte),
+            Instruction::AddV { vx, byte } => self.add_v(vx, byte),
+            Instruction::LdVV { vx, vy } => self.ld_v_v(vx, vy),
+            Instruction::OrVV { vx, vy } => self.or_v_v(vx, vy),
+            Instruction::AndVV { vx, vy } => self.and_v_v(vx, vy),
+            Instruction::XorVV { vx, vy } => self.xor_v_v(vx, vy),
+            Instruction::AddVV { vx, vy } => self.add_v_v(vx, vy),
+            Instruction::SubVV { vx, vy } => self.sub_v_v(vx, vy),
+            Instruction::ShrVV { vx, .. } => self.shr_v_v(vx),
+            Instruction::SubnVV { vx, vy } => self.subn_v_v(vx, vy),
+            Instruction::ShlVV { vx, .. } => self.shl_v_v(vx),
+            Instruction::SneVV { vx, vy } => self.sne_v_v(vx, vy),
+            Instruction::LdI { addr } => self.ld_i(addr),
+            Instruction::JpV { addr } => self.jp_v(addr),
+            Instruction::RndV { vx, byte } => self.rnd_v(vx, byte),
+            Instruction::Drw { vx, vy, n } => self.drw(vx, vy, n, display),
+            Instruction::SkpV { vx } => self.skp_v(vx, keyboard),
+            Instruction::SknpV { vx } => self.sknp_v(vx, keyboard),
+            Instruction::LdVDt { vx } => self.ld_v_dt(vx),
+            Instruction::LdVK { vx } => self.ld_v_k(vx, keyboard),
+            Instruction::LdDtV { vx } => self.ld_dt_v(vx),
+            Instruction::LdStV { vx } => self.ld_st_v(vx),
+            Instruction::AddIV { vx } => self.add_i_v(vx),
+            Instruction::LdFV { vx } => self.ld_f_v(vx),
+            Instruction::LdBV { vx } => self.ld_b_v(vx),
+            Instruction::LdIV { vx } => self.ld_i_v(vx),
+            Instruction::LdVI { vx } => self.ld_v_i(vx),
+        };
+
+        Ok(())
     }
 
     /// Clears the display
@@ -96,25 +91,19 @@ impl Emulator {
     }
 
     /// Jumps the program counter to nnn (0x1nnn)
-    fn jp(&self, instruction: u16) -> usize {
-        let addr = instruction & 0xFFF;
-        addr as usize
+    fn jp(&self, addr: usize) -> usize {
+        addr
     }
 
     /// Calls subroutine at nnn (0x2nnn)
-    fn call(&mut self, instruction: u16) -> usize {
-        let addr = instruction & 0xFFF;
-
+    fn call(&mut self, addr: usize) -> usize {
         self.stack.push(self.program_counter);
-        addr as usize
+        addr
     }
 
     /// Skips an instruction if Vx == kk (0x3xkk)
-    fn se_v(&self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let byte = (instruction & 0xFF) as u8;
-
-        if self.registers[vx as usize] == byte {
+    fn se_v(&self, vx: usize, byte: u8) -> usize {
+        if self.registers[vx] == byte {
             self.program_counter + 4
         } else {
             self.program_counter + 2
@@ -122,11 +111,8 @@ impl Emulator {
     }
 
     /// Skips an instruction if Vx != kk (0x4xkk)
-    fn sne_v(&self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let byte = (instruction & 0xFF) as u8;
-
-        if self.registers[vx as usize] == byte {
+    fn sne_v(&self, vx: usize, byte: u8) -> usize {
+        if self.registers[vx] == byte {
             self.program_counter + 2
         } else {
             self.program_counter + 4
@@ -134,11 +120,8 @@ impl Emulator {
     }
 
     /// Skips an instruction if Vx == Vy (0x5xy0)
-    fn se_v_v(&self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let vy = instruction >> 4 & 0xF;
-
-        if self.registers[vx as usize] == self.registers[vy as usize] {
+    fn se_v_v(&self, vx: usize, vy: usize) -> usize {
+        if self.registers[vx] == self.registers[vy] {
             self.program_counter + 4
         } else {
             self.program_counter + 2
@@ -146,122 +129,85 @@ impl Emulator {
     }
 
     /// Loads kk to Vx (0x6xkk)
-    fn ld_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let byte = (instruction & 0xFF) as u8;
-
-        self.registers[vx as usize] = byte;
+    fn ld_v(&mut self, vx: usize, byte: u8) -> usize {
+        self.registers[vx] = byte;
         self.program_counter + 2
     }
 
     /// Adds kk to Vx (0x7xkk)
-    fn add_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let byte = (instruction & 0xFF) as u8;
-
-        self.registers[vx as usize] = self.registers[vx as usize].wrapping_add(byte);
+    fn add_v(&mut self, vx: usize, byte: u8) -> usize {
+        self.registers[vx] = self.registers[vx].wrapping_add(byte);
         self.program_counter + 2
     }
 
     /// Sets Vy to Vx (0x8xy0)
-    fn ld_v_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let vy = instruction >> 4 & 0xF;
-
-        self.registers[vx as usize] = self.registers[vy as usize];
+    fn ld_v_v(&mut self, vx: usize, vy: usize) -> usize {
+        self.registers[vx] = self.registers[vy];
         self.program_counter + 2
     }
 
     /// Stores bitwise OR of Vx and Vy to Vx (0x8xy1)
-    fn or_v_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let vy = instruction >> 4 & 0xF;
-
-        self.registers[vx as usize] |= self.registers[vy as usize];
+    fn or_v_v(&mut self, vx: usize, vy: usize) -> usize {
+        self.registers[vx] |= self.registers[vy];
         self.program_counter + 2
     }
 
     /// Stores bitwise AND of Vx and Vy in Vx (0x8xy2)
-    fn and_v_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let vy = instruction >> 4 & 0xF;
-
-        self.registers[vx as usize] &= self.registers[vy as usize];
+    fn and_v_v(&mut self, vx: usize, vy: usize) -> usize {
+        self.registers[vx] &= self.registers[vy];
         self.program_counter + 2
     }
 
     /// Stores bitwise XOR of Vx and Vy in Vx (0x8xy3)
-    fn xor_v_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let vy = instruction >> 4 & 0xF;
-
-        self.registers[vx as usize] ^= self.registers[vy as usize];
+    fn xor_v_v(&mut self, vx: usize, vy: usize) -> usize {
+        self.registers[vx] ^= self.registers[vy];
         self.program_counter + 2
     }
 
     /// Adds Vx and Vy with carry (0x8xy4)
-    fn add_v_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let vy = instruction >> 4 & 0xF;
-
-        let (value, carry) =
-            self.registers[vx as usize].overflowing_add(self.registers[vy as usize]);
+    fn add_v_v(&mut self, vx: usize, vy: usize) -> usize {
+        let (value, carry) = self.registers[vx].overflowing_add(self.registers[vy]);
 
         self.registers[0xF] = carry as u8;
-        self.registers[vx as usize] = value;
+        self.registers[vx] = value;
         self.program_counter + 2
     }
 
     /// Subtracts Vy from Vx with carry (0x8xy5)
-    fn sub_v_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let vy = instruction >> 4 & 0xF;
-
-        let (value, carry) =
-            self.registers[vx as usize].overflowing_sub(self.registers[vy as usize]);
+    fn sub_v_v(&mut self, vx: usize, vy: usize) -> usize {
+        let (value, carry) = self.registers[vx].overflowing_sub(self.registers[vy]);
 
         self.registers[0xF] = !carry as u8;
-        self.registers[vx as usize] = value;
+        self.registers[vx] = value;
         self.program_counter + 2
     }
 
     /// Shifts Vx to the right with carry (0x8xy6)
-    fn shr_v_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-
-        self.registers[0xF] = self.registers[vx as usize] % 2;
-        self.registers[vx as usize] >>= 1;
+    fn shr_v_v(&mut self, vx: usize) -> usize {
+        self.registers[0xF] = self.registers[vx] % 2;
+        self.registers[vx] >>= 1;
         self.program_counter + 2
     }
 
     /// Subtracts Vy from Vx and stores result in Vx with carry (0x8xy7)
-    fn subn_v_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let vy = instruction >> 4 & 0xF;
-
-        let (value, carry) =
-            self.registers[vy as usize].overflowing_sub(self.registers[vx as usize]);
+    fn subn_v_v(&mut self, vx: usize, vy: usize) -> usize {
+        let (value, carry) = self.registers[vy].overflowing_sub(self.registers[vx]);
 
         self.registers[0xF] = !carry as u8;
-        self.registers[vx as usize] = value;
+        self.registers[vx] = value;
         self.program_counter + 2
     }
 
     /// Shifts Vx to the left with carry (0x8xyE)
-    fn shl_v_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-
-        self.registers[0xF] = (0b10000000 <= self.registers[vx as usize]) as u8;
-        self.registers[vx as usize] <<= 1;
+    fn shl_v_v(&mut self, vx: usize) -> usize {
+        self.registers[0xF] = (0b10000000 <= self.registers[vx]) as u8;
+        self.registers[vx] <<= 1;
         self.program_counter + 2
     }
 
     /// Skips the next instruction if Vx != Vy (0x9xy0)
-    fn sne_v_v(&self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let vy = instruction >> 4 & 0xF;
-
-        if self.registers[vx as usize] == self.registers[vy as usize] {
+    fn sne_v_v(&self, vx: usize, vy: usize) -> usize {
+        if self.registers[vx] == self.registers[vy] {
             self.program_counter + 2
         } else {
             self.program_counter + 4
@@ -269,38 +215,27 @@ impl Emulator {
     }
 
     /// Loads nnn to Vi (0xAnnn)
-    fn ld_i(&mut self, instruction: u16) -> usize {
-        let addr = instruction & 0xFFF;
-
-        self.i = addr;
+    fn ld_i(&mut self, addr: usize) -> usize {
+        self.i = addr as u16;
         self.program_counter + 2
     }
 
     /// Jumps program counter to nnn + V0 (0xBnnn)
-    fn jp_v(&self, instruction: u16) -> usize {
-        let addr = instruction & 0xFFF;
-
-        addr as usize + self.registers[0x0] as usize
+    fn jp_v(&self, addr: usize) -> usize {
+        addr + self.registers[0x0] as usize
     }
 
     /// Randomly generates a random number to store in Vx (0xCxkk)
-    fn rnd_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let byte = (instruction & 0xFF) as u8;
-
-        self.registers[vx as usize] = rand::thread_rng().gen::<u8>() & byte;
+    fn rnd_v(&mut self, vx: usize, byte: u8) -> usize {
+        self.registers[vx] = rand::thread_rng().gen::<u8>() & byte;
         self.program_counter + 2
     }
 
     /// Draws n-byte sprite from Vi at Vx, Vy (0xDxyn)
-    fn drw(&mut self, instruction: u16, display: &mut Display) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let vy = instruction >> 4 & 0xF;
-        let n = (instruction & 0xF) as usize;
-
+    fn drw(&mut self, vx: usize, vy: usize, n: usize, display: &mut Display) -> usize {
         let offset = self.i as usize;
-        let x = self.registers[vx as usize] as usize;
-        let y = self.registers[vy as usize] as usize;
+        let x = self.registers[vx] as usize;
+        let y = self.registers[vy] as usize;
 
         let sprite = self.memory.get_sprite(offset, n);
         let erased = display.xor_sprite(x, y, sprite);
@@ -310,10 +245,8 @@ impl Emulator {
     }
 
     /// Skips the next instruction if Vx is pressed (0xEx9E)
-    fn skp_v(&self, instruction: u16, keyboard: &Keyboard) -> usize {
-        let vx = instruction >> 8 & 0xF;
-
-        if keyboard.is_pressed(&self.registers[vx as usize].into()) {
+    fn skp_v(&self, vx: usize, keyboard: &Keyboard) -> usize {
+        if keyboard.is_pressed(&self.registers[vx].into()) {
             self.program_counter + 4
         } else {
             self.program_counter + 2
@@ -321,10 +254,8 @@ impl Emulator {
     }
 
     /// Skips the next instruction if Vx is not pressed (0xExA1)
-    fn sknp_v(&self, instruction: u16, keyboard: &Keyboard) -> usize {
-        let vx = instruction >> 8 & 0xF;
-
-        if keyboard.is_pressed(&self.registers[vx as usize].into()) {
+    fn sknp_v(&self, vx: usize, keyboard: &Keyboard) -> usize {
+        if keyboard.is_pressed(&self.registers[vx].into()) {
             self.program_counter + 2
         } else {
             self.program_counter + 4
@@ -332,21 +263,17 @@ impl Emulator {
     }
 
     /// Loads the delay timer into Vx (0xFx07)
-    fn ld_v_dt(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-
-        self.registers[vx as usize] = self.delay_timer;
+    fn ld_v_dt(&mut self, vx: usize) -> usize {
+        self.registers[vx] = self.delay_timer;
         self.program_counter + 2
     }
 
     /// Stops execution until a key press then stores it in Vx (0xFx0A)
-    fn ld_v_k(&mut self, instruction: u16, keyboard: &Keyboard) -> usize {
-        let vx = instruction >> 8 & 0xF;
-
+    fn ld_v_k(&mut self, vx: usize, keyboard: &Keyboard) -> usize {
         let key_pressed = Keyboard::keys().find(|key| keyboard.is_pressed(key));
 
         if let Some(key) = key_pressed {
-            self.registers[vx as usize] = key as u8;
+            self.registers[vx] = key as u8;
             self.program_counter + 2
         } else {
             self.program_counter
@@ -354,42 +281,34 @@ impl Emulator {
     }
 
     /// Loads Vx into the delay timer (0xFx15)
-    fn ld_dt_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-
-        self.delay_timer = self.registers[vx as usize];
+    fn ld_dt_v(&mut self, vx: usize) -> usize {
+        self.delay_timer = self.registers[vx];
         self.program_counter + 2
     }
 
     /// Loads Vx into the sound timer (0xFx18)
-    fn ld_st_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-
-        self.sound_timer = self.registers[vx as usize];
+    fn ld_st_v(&mut self, vx: usize) -> usize {
+        self.sound_timer = self.registers[vx];
         self.program_counter + 2
     }
 
     /// Adds Vx to Vi (0xFx1E)
-    fn add_i_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-
-        self.i = self.i.wrapping_add(self.registers[vx as usize] as u16);
+    fn add_i_v(&mut self, vx: usize) -> usize {
+        self.i = self.i.wrapping_add(self.registers[vx] as u16);
         self.program_counter + 2
     }
 
     /// Sets Vi to the location of sprite Vx (0xFx29)
-    fn ld_f_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let value = self.registers[vx as usize];
+    fn ld_f_v(&mut self, vx: usize) -> usize {
+        let value = self.registers[vx];
 
         self.i = Memory::calculate_digit_offset(value) as u16;
         self.program_counter + 2
     }
 
     /// Store BCD representation of Vx in memory (0xFx33)
-    fn ld_b_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-        let x = self.registers[vx as usize];
+    fn ld_b_v(&mut self, vx: usize) -> usize {
+        let x = self.registers[vx];
 
         for index in 0..3 {
             let offset = (self.i + index) as usize;
@@ -401,23 +320,19 @@ impl Emulator {
     }
 
     /// Loads [V0, Vx] to memory starting at Vi (0xFx55)
-    fn ld_i_v(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-
+    fn ld_i_v(&mut self, vx: usize) -> usize {
         for index in 0..=vx {
             self.memory
-                .set_byte((self.i + index) as usize, self.registers[index as usize])
+                .set_byte(self.i as usize + index, self.registers[index])
         }
 
         self.program_counter + 2
     }
 
     /// Loads memory starting at Vi to [V0, Vx] (0xFx65)
-    fn ld_v_i(&mut self, instruction: u16) -> usize {
-        let vx = instruction >> 8 & 0xF;
-
+    fn ld_v_i(&mut self, vx: usize) -> usize {
         for index in 0..=vx {
-            self.registers[index as usize] = self.memory.get_byte((self.i + index) as usize);
+            self.registers[index] = self.memory.get_byte(self.i as usize + index);
         }
 
         self.program_counter + 2
@@ -435,7 +350,7 @@ mod tests {
         let mut display = Display::new(&[(0, 0)]);
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(display.get_pixel(0, 0), false);
@@ -448,7 +363,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x402);
         assert_eq!(emulator.stack, vec![]);
@@ -460,7 +375,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x234);
         assert_eq!(emulator.stack, vec![]);
@@ -472,7 +387,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x345);
         assert_eq!(emulator.stack, vec![0x200]);
@@ -485,7 +400,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x204);
     }
@@ -497,7 +412,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
     }
@@ -509,7 +424,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
     }
@@ -521,7 +436,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x204);
     }
@@ -534,7 +449,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x204);
     }
@@ -547,7 +462,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
     }
@@ -558,7 +473,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0x7], 0x89);
@@ -570,12 +485,12 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0x8], 0x9A);
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x204);
         assert_eq!(emulator.registers[0x8], 0x34);
@@ -589,7 +504,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0x9], 0x40);
@@ -603,7 +518,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0x9], 0b11111100);
@@ -617,7 +532,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0x9], 0b11000000);
@@ -631,7 +546,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0x9], 0b00111100);
@@ -645,13 +560,13 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0x9], 0xF0);
         assert_eq!(emulator.registers[0xF], 0);
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x204);
         assert_eq!(emulator.registers[0x9], 0x68);
@@ -666,13 +581,13 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0x9], 0x0);
         assert_eq!(emulator.registers[0xF], 1);
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x204);
         assert_eq!(emulator.registers[0x9], 0x88);
@@ -686,13 +601,13 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0x9], 0b00000010);
         assert_eq!(emulator.registers[0xF], 1);
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x204);
         assert_eq!(emulator.registers[0x9], 0b00000001);
@@ -707,13 +622,13 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0x9], 0x0);
         assert_eq!(emulator.registers[0xF], 1);
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x204);
         assert_eq!(emulator.registers[0x9], 0x78);
@@ -727,13 +642,13 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0x9], 0b01000000);
         assert_eq!(emulator.registers[0xF], 1);
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x204);
         assert_eq!(emulator.registers[0x9], 0b10000000);
@@ -748,7 +663,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x204);
     }
@@ -761,7 +676,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
     }
@@ -772,7 +687,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.i, 0xBCD);
         assert_eq!(emulator.program_counter, 0x202);
@@ -785,7 +700,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0xCDF);
         assert_eq!(emulator.stack, vec![]);
@@ -802,7 +717,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(display.get_pixel(0x3E, 0x2), true);
         assert_eq!(display.get_pixel(0x3F, 0x2), true);
@@ -833,7 +748,7 @@ mod tests {
         let mut keyboard = Keyboard::default();
         keyboard.press(&Key::Num5);
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x204);
     }
@@ -846,7 +761,7 @@ mod tests {
         let mut keyboard = Keyboard::default();
         keyboard.release(&Key::Num5);
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
     }
@@ -859,7 +774,7 @@ mod tests {
         let mut keyboard = Keyboard::default();
         keyboard.press(&Key::Num5);
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
     }
@@ -872,7 +787,7 @@ mod tests {
         let mut keyboard = Keyboard::default();
         keyboard.release(&Key::Num5);
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x204);
     }
@@ -884,7 +799,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0x1], 0x55);
@@ -896,14 +811,14 @@ mod tests {
         let mut display = Display::default();
         let mut keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x200);
         assert_eq!(emulator.registers[0x2], 0x0);
 
         keyboard.press(&Key::Num2);
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.registers[0x2], 0x2);
@@ -916,7 +831,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.delay_timer, 0x3);
@@ -929,7 +844,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.program_counter, 0x202);
         assert_eq!(emulator.sound_timer, 0x4);
@@ -943,7 +858,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.i, 0x134);
         assert_eq!(emulator.program_counter, 0x202);
@@ -957,7 +872,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.i, 0xA * 5);
         assert_eq!(emulator.program_counter, 0x202);
@@ -971,7 +886,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.memory.get_byte(0x400), 0x1);
         assert_eq!(emulator.memory.get_byte(0x401), 0x2);
@@ -989,7 +904,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.memory.get_byte(0x400), 0x1);
         assert_eq!(emulator.memory.get_byte(0x404), 0x5);
@@ -1007,7 +922,7 @@ mod tests {
         let mut display = Display::default();
         let keyboard = Keyboard::default();
 
-        emulator.tick(&mut display, &keyboard);
+        emulator.tick(&mut display, &keyboard).unwrap();
 
         assert_eq!(emulator.registers[0x0], 0x1);
         assert_eq!(emulator.registers[0x4], 0x5);

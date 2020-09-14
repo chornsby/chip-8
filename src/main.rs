@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 
 mod display;
 mod emulator;
+mod instruction;
 mod keyboard;
 mod memory;
 
@@ -95,7 +96,7 @@ fn main() -> Result<(), String> {
 
         // Update at 480Hz
         for _ in 0..8 {
-            emulator.tick(&mut display, &keyboard);
+            emulator.tick(&mut display, &keyboard)?;
         }
         emulator.decrement_timers();
 

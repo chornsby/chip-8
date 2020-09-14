@@ -68,7 +68,10 @@ fn main() -> Result<(), String> {
 
     let mut event_pump = sdl_context.event_pump()?;
 
-    let rom = std::fs::read("roms/BLINKY").expect("Unable to read rom");
+    let args: Vec<String> = std::env::args().collect();
+    let path = &args[1];
+    let rom = std::fs::read(path).expect("Unable to read rom");
+
     let mut emulator = emulator::Emulator::new(&rom);
     let mut display = display::Display::default();
     let mut keyboard = keyboard::Keyboard::default();

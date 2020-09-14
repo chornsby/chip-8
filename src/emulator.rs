@@ -37,6 +37,11 @@ impl Emulator {
         self.sound_timer = self.sound_timer.saturating_sub(1);
     }
 
+    /// Returns true if the Chip-8 buzzer is active
+    pub fn is_sound_playing(&self) -> bool {
+        0 < self.sound_timer
+    }
+
     /// Evaluates one CPU instruction and updates the program counter
     pub fn tick(&mut self, display: &mut Display, keyboard: &Keyboard) -> Result<(), String> {
         let bytes = self.memory.get_instruction(self.program_counter);

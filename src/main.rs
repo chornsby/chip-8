@@ -173,11 +173,10 @@ fn main() -> Result<(), String> {
         canvas.present();
 
         // Framerate
-        let frame_end = Instant::now();
-        let frame_time = frame_end - frame_start;
+        let elapsed = frame_start.elapsed();
 
-        if frame_time < TARGET_FRAME_TIME {
-            std::thread::sleep(TARGET_FRAME_TIME - frame_time);
+        if elapsed < TARGET_FRAME_TIME {
+            std::thread::sleep(TARGET_FRAME_TIME - elapsed);
         }
     }
 

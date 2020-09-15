@@ -13,6 +13,7 @@ mod keyboard;
 mod memory;
 
 const SCALE: usize = 20;
+const TARGET_FRAME_TIME: Duration = Duration::from_millis(16);
 
 struct SquareWave {
     phase_inc: f32,
@@ -112,8 +113,6 @@ fn main() -> Result<(), String> {
     let mut display = display::Display::default();
     let mut keyboard = keyboard::Keyboard::default();
 
-    let target_frame_time = Duration::from_secs(1) / 60;
-
     'is_running: loop {
         let frame_start = Instant::now();
 
@@ -141,7 +140,7 @@ fn main() -> Result<(), String> {
 
         emulator.decrement_timers();
 
-        // Update at 480Hz
+        // Update at 500Hz
         for _ in 0..8 {
             emulator.tick(&mut display, &keyboard)?;
         }
@@ -153,7 +152,7 @@ fn main() -> Result<(), String> {
             audio_device.pause();
         }
 
-        // Render at 60Hz
+        // Render at 62.5Hz
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
         canvas.set_draw_color(Color::WHITE);
@@ -177,8 +176,8 @@ fn main() -> Result<(), String> {
         let frame_end = Instant::now();
         let frame_time = frame_end - frame_start;
 
-        if frame_time < target_frame_time {
-            std::thread::sleep(target_frame_time - frame_time);
+        if frame_time < TARGET_FRAME_TIME {
+            std::thread::sleep(TARGET_FRAME_TIME - frame_time);
         }
     }
 

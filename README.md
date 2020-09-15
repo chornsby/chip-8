@@ -2,8 +2,14 @@
 
 ![Test](https://github.com/chornsby/chip-8/workflows/Test/badge.svg)
 
-This is an in-progress Chip-8 emulator built to learn more about emulation and
-Rust without following an explicit step-by-step tutorial.
+This is a working Chip-8 emulator built to learn more about emulation and Rust
+without following an explicit step-by-step tutorial.
+
+You will need the [SDL2 library][0] installed in order to compile the project.
+
+```bash
+cargo run -- <path_to_rom>
+```
 
 ## Acknowledgements
 
@@ -13,3 +19,5 @@ Rust without following an explicit step-by-step tutorial.
 - https://www.zophar.net/pdroms/chip8.html
 - https://en.wikipedia.org/wiki/CHIP-8
 - https://sunjay.dev/learn-game-dev/opening-a-window.html
+
+[0]: https://github.com/Rust-SDL2/rust-sdl2#sdl20-development-libraries

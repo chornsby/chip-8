@@ -1,9 +1,13 @@
-use crate::display::Display;
-use crate::instruction::Instruction;
-use crate::keyboard::Keyboard;
-use crate::memory::{Memory, PROGRAM_OFFSET};
-use rand::Rng;
 use std::convert::TryFrom;
+
+use rand::Rng;
+
+use crate::{
+    display::Display,
+    instruction::Instruction,
+    keyboard::Keyboard,
+    memory::{Memory, PROGRAM_OFFSET},
+};
 
 pub struct Emulator {
     memory: Memory,

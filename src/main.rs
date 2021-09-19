@@ -1,10 +1,15 @@
-use sdl2::audio::{AudioCallback, AudioSpecDesired, AudioStatus};
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
-use sdl2::rect::Rect;
-use std::convert::{TryFrom, TryInto};
-use std::time::{Duration, Instant};
+use std::{
+    convert::{TryFrom, TryInto},
+    time::{Duration, Instant},
+};
+
+use sdl2::{
+    audio::{AudioCallback, AudioSpecDesired, AudioStatus},
+    event::Event,
+    keyboard::Keycode,
+    pixels::Color,
+    rect::Rect,
+};
 
 mod display;
 mod emulator;

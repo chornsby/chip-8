@@ -97,3 +97,20 @@ impl TryFrom<u16> for Instruction {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_invalid_instruction() {
+        let result = Instruction::try_from(0xF999);
+        assert!(matches!(result, Err(message) if message == "Unknown instruction 0xF999"));
+    }
+
+    #[test]
+    fn test_parse_valid_instruction() {
+        let result = Instruction::try_from(0x2999);
+        assert!(matches!(result, Ok(Instruction::Call { addr: 0x999 })));
+    }
+}
